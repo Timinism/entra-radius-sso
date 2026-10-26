@@ -18,6 +18,7 @@ use LibreNmsPlugin\PanosVpn\Support\SettingsMerger;
 use LibreNmsPlugin\PanosVpn\View\Format;
 use LibreNmsPlugin\PanosVpn\View\Html;
 use LibreNmsPlugin\PanosVpn\View\Presenter;
+use LibreNmsPlugin\PanosVpn\View\TunnelGroups;
 
 $failures = 0;
 $checks = 0;
@@ -238,6 +239,31 @@ check('decap rate', (int) $byName['A']['bps_in'] === 3200, (string) $byName['A']
 check('flat counter is zero', (int) $byName['B']['bps_out'] === 0);
 $rates = Presenter::rates($dash['tunnels']);
 check('rates sum per-tunnel counters', $rates['out'] === 4000, (string) $rates['out']);
+$grouped = Presenter::dashboard($repo->dashboard(), [], '/', 'America/Chicago', false, 1_010);
+check('proxy ids share one tunnel row', array_column($grouped['tunnels'], 'name') === ['C', 'tunnel.1']);
+$groupedHtml = Html::dashboard($grouped);
+check(
+    'proxy ids stay collapsed',
+    str_contains($groupedHtml, '2 proxy IDs')
+    && str_contains($groupedHtml, 'pv-proxy-name">A')
+    && str_contains($groupedHtml, 'pv-proxy-name">B')
+    && substr_count($groupedHtml, 'class="pv-name"') === 2
+);
+$collapsed = TunnelGroups::collapse([
+    ['device_id' => 1, 'name' => 'HQ-to-DC:servers', 'state' => 'active', 'inner_if' => 'tunnel.10', 'gateway' => 'IKE-DC', 'peer_ip' => '198.51.100.10', 'bps_in' => 100, 'bps_out' => 50, 'bandwidth_scope' => 'tunnel', 'device_name' => 'HQ', 'samples' => []],
+    ['device_id' => 1, 'name' => 'HQ-to-DC:users', 'state' => 'active', 'inner_if' => 'tunnel.10', 'gateway' => 'IKE-DC', 'peer_ip' => '198.51.100.10', 'bps_in' => 10, 'bps_out' => 5, 'bandwidth_scope' => 'tunnel', 'device_name' => 'HQ', 'samples' => []],
+    ['device_id' => 1, 'name' => 'HQ-to-DC:voice', 'state' => 'inactive', 'inner_if' => 'tunnel.10', 'gateway' => 'IKE-DC', 'peer_ip' => '198.51.100.10', 'bps_in' => 0, 'bps_out' => 0, 'bandwidth_scope' => 'tunnel', 'device_name' => 'HQ', 'samples' => []],
+    ['device_id' => 1, 'name' => 'Other', 'state' => 'active', 'inner_if' => 'tunnel.2', 'gateway' => 'IKE-O', 'peer_ip' => '1.1.1.1', 'bps_in' => 1, 'bps_out' => 1, 'bandwidth_scope' => 'tunnel', 'device_name' => 'HQ', 'samples' => []],
+]);
+check('named tunnel keeps a separate row', count($collapsed) === 2 && $collapsed[1]['name'] === 'Other' && $collapsed[1]['proxy_ids'] === []);
+check('proxy tunnel uses the shared prefix', $collapsed[0]['name'] === 'HQ-to-DC' && $collapsed[0]['state'] === 'partial' && count($collapsed[0]['proxy_ids']) === 3);
+check('down proxy is listed first', $collapsed[0]['proxy_ids'][0]['label'] === 'voice');
+check('proxy rates add up', (int) $collapsed[0]['bps_in'] === 110 && (int) $collapsed[0]['bps_out'] === 55);
+$sharedGroup = TunnelGroups::collapse([
+    ['device_id' => 1, 'name' => 'P1', 'state' => 'active', 'inner_if' => 'tunnel.5', 'gateway' => 'G', 'peer_ip' => '9.9.9.9', 'bps_in' => 80, 'bps_out' => 40, 'bandwidth_scope' => 'interface', 'device_name' => 'HQ', 'samples' => []],
+    ['device_id' => 1, 'name' => 'P2', 'state' => 'active', 'inner_if' => 'tunnel.5', 'gateway' => 'G', 'peer_ip' => '9.9.9.9', 'bps_in' => 80, 'bps_out' => 40, 'bandwidth_scope' => 'interface', 'device_name' => 'HQ', 'samples' => []],
+]);
+check('shared proxy rate is counted once', (int) $sharedGroup[0]['bps_in'] === 80 && $sharedGroup[0]['shared_rate'] === true);
 
 $repo->fail(9, 'edge.example', 'Edge', 'Invalid credential', 1_010);
 $afterFail = $repo->dashboard();

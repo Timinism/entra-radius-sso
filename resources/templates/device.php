@@ -46,8 +46,9 @@ $page = (string) ($vm['page_url'] ?? $vm['base']);
         <ul>
             <?php foreach ($vm['tunnels'] as $tunnel): ?>
                 <li>
-                    <i class="pv-dot" style="color: <?= Format::stateTone((string) $tunnel['state']) === 'up' ? 'var(--up)' : (Format::stateTone((string) $tunnel['state']) === 'init' ? 'var(--init)' : 'var(--down)') ?>"></i>
-                    <span title="<?= $h((string) $tunnel['name']) ?>"><?= $h((string) $tunnel['name']) ?></span>
+                    <?php $tone = Format::stateTone((string) $tunnel['state']); ?>
+                    <i class="pv-dot" style="color: <?= $tone === 'up' ? 'var(--up)' : ($tone === 'init' || $tone === 'partial' ? 'var(--init)' : 'var(--down)') ?>"></i>
+                    <span title="<?= $h((string) $tunnel['name']) ?>"><?= $h((string) $tunnel['name']) ?><?php if (($tunnel['proxy_ids'] ?? []) !== []): ?> · <?= count($tunnel['proxy_ids']) ?> proxy IDs<?php endif; ?></span>
                     <span class="peer"><?= $h((string) ($tunnel['peer_ip'] ?? '—')) ?></span>
                     <span class="pv-num"><?= $h(Format::rate($tunnel['bps_in'] === null || $tunnel['bps_in'] === '' ? null : (int) $tunnel['bps_in'])) ?> / <?= $h(Format::rate($tunnel['bps_out'] === null || $tunnel['bps_out'] === '' ? null : (int) $tunnel['bps_out'])) ?></span>
                 </li>

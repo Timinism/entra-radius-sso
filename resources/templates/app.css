@@ -234,7 +234,7 @@
 
 .pv-pill.up { background: var(--up-bg); color: var(--up); }
 .pv-pill.down { background: var(--down-bg); color: var(--down); }
-.pv-pill.init { background: var(--init-bg); color: var(--init); }
+.pv-pill.init, .pv-pill.partial { background: var(--init-bg); color: var(--init); }
 
 .pv-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; display: inline-block; }
 
@@ -268,6 +268,24 @@
 
 .pv details summary { cursor: pointer; color: var(--navy); font-size: 12px; font-weight: 650; }
 .pv details p { margin-top: 6px; color: var(--muted); font-size: 12px; }
+
+.pv-proxy { margin-top: 6px; }
+.pv-proxy summary { list-style: none; }
+.pv-proxy summary::-webkit-details-marker { display: none; }
+.pv-proxy summary::before { content: "▸ "; }
+.pv-proxy[open] summary::before { content: "▾ "; }
+.pv-proxy-list { list-style: none; margin: 6px 0 0; padding: 0; min-width: 240px; }
+.pv-proxy-list li {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 8px;
+    align-items: center;
+    padding: 5px 0;
+    border-top: 1px solid #eef2f6;
+    font-size: 12px;
+    font-weight: 500;
+}
+.pv-proxy-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .pv-gates {
     display: grid;

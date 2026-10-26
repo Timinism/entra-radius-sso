@@ -56,6 +56,7 @@ final class Presenter
             ];
         }
 
+        $tunnels = TunnelGroups::collapse($tunnels);
         $scopedTunnels = array_values(array_filter(
             $tunnels,
             static fn (array $tunnel): bool => $firewallId === null || (int) $tunnel['device_id'] === $firewallId
@@ -76,12 +77,18 @@ final class Presenter
             if ($needle === '') {
                 return true;
             }
+            $proxyNames = [];
+            foreach ($tunnel['proxy_ids'] ?? [] as $proxy) {
+                $proxyNames[] = (string) ($proxy['label'] ?? '');
+                $proxyNames[] = (string) ($proxy['name'] ?? '');
+            }
             $haystack = strtolower(implode(' ', [
                 (string) $tunnel['name'],
                 (string) $tunnel['device_name'],
                 (string) ($tunnel['peer_ip'] ?? ''),
                 (string) ($tunnel['gateway'] ?? ''),
                 (string) ($tunnel['inner_if'] ?? ''),
+                implode(' ', $proxyNames),
             ]));
 
             return str_contains($haystack, $needle);
@@ -188,7 +195,7 @@ final class Presenter
             ],
             'stats' => [
                 ['label' => 'Tunnels up', 'value' => (string) $up, 'hint' => 'of '.count($scopedTunnels).' site-to-site', 'tone' => 'up'],
-                ['label' => 'Tunnels down', 'value' => (string) (count($scopedTunnels) - $up), 'hint' => 'inactive, init, or unknown', 'tone' => $up === count($scopedTunnels) ? 'muted' : 'down'],
+                ['label' => 'Tunnels down', 'value' => (string) (count($scopedTunnels) - $up), 'hint' => 'partial, inactive, or init', 'tone' => $up === count($scopedTunnels) ? 'muted' : 'down'],
                 ['label' => 'Traffic in', 'value' => Format::rate($totals['in']), 'hint' => 'decap, toward the firewall', 'tone' => 'in'],
                 ['label' => 'Traffic out', 'value' => Format::rate($totals['out']), 'hint' => 'encap, toward the peer', 'tone' => 'out'],
                 ['label' => 'GlobalProtect', 'value' => (string) $gpUsers, 'hint' => count($scopedGateways).' gateway'.(count($scopedGateways) === 1 ? '' : 's'), 'tone' => 'users'],

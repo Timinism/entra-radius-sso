@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace LibreNmsPlugin\PanosVpn\Polling;
 
 use LibreNmsPlugin\PanosVpn\Panos\Snapshot;
+use LibreNmsPlugin\PanosVpn\View\TunnelGroups;
 
 final class Repository
 {
@@ -71,7 +72,9 @@ final class Repository
      */
     public function summary(): array
     {
-        $tunnels = $this->connection->all('SELECT state FROM panos_vpn_tunnels');
+        $tunnels = TunnelGroups::collapse(
+            $this->connection->all('SELECT device_id, name, state, inner_if, gateway FROM panos_vpn_tunnels')
+        );
         $down = 0;
         foreach ($tunnels as $tunnel) {
             if (strtolower((string) $tunnel['state']) !== 'active') {

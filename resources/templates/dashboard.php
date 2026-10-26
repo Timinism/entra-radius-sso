@@ -171,17 +171,48 @@ foreach ($vm['tunnels'] as $tunnel) {
                             $in[] = $sample['bps_in'] === null ? null : (int) $sample['bps_in'];
                             $out[] = $sample['bps_out'] === null ? null : (int) $sample['bps_out'];
                         }
-                        $shared = ($tunnel['bandwidth_scope'] ?? null) === 'interface';
+                        $shared = ! empty($tunnel['shared_rate']) || ($tunnel['bandwidth_scope'] ?? null) === 'interface';
+                        $proxies = $tunnel['proxy_ids'] ?? [];
+                        $proxyUp = 0;
+                        foreach ($proxies as $proxy) {
+                            if (strtolower((string) $proxy['state']) === 'active') {
+                                $proxyUp++;
+                            }
+                        }
+                        $proxySummary = count($proxies).' proxy IDs';
+                        if ($proxies !== [] && $proxyUp !== count($proxies)) {
+                            $proxySummary = $proxyUp.' of '.count($proxies).' proxy IDs up';
+                        }
                         ?>
                         <tr class="<?= $tone === 'up' ? '' : 'is-down' ?>">
                             <td><span class="pv-pill <?= $h($tone) ?>"><i class="pv-dot"></i><?= $h(Format::stateLabel((string) $tunnel['state'])) ?></span></td>
                             <td><a href="<?= $h($deviceBase.'/'.(int) $tunnel['device_id'].'/panos-vpn') ?>"><?= $h((string) $tunnel['device_name']) ?></a></td>
                             <td>
-                                <div class="pv-name"><?= $h((string) $tunnel['name']) ?><?php if ($shared): ?><span class="pv-badge">shared iface</span><?php endif; ?></div>
-                                <div class="pv-sub"><?= $h((string) ($tunnel['inner_if'] ?? 'no tunnel interface')) ?><?= $tunnel['gateway'] ? ' · '.$h((string) $tunnel['gateway']) : '' ?></div>
+                                <div class="pv-name"><?= $h((string) $tunnel['name']) ?><?php if ($shared && $proxies === []): ?><span class="pv-badge">shared iface</span><?php endif; ?></div>
+                                <div class="pv-sub"><?= $h((string) ($tunnel['inner_if'] ?? 'no tunnel interface')) ?><?= ! empty($tunnel['gateway']) && (string) $tunnel['gateway'] !== (string) $tunnel['name'] ? ' · '.$h((string) $tunnel['gateway']) : '' ?></div>
+                                <?php if ($proxies !== []): ?>
+                                    <details class="pv-proxy">
+                                        <summary><?= $h($proxySummary) ?></summary>
+                                        <ul class="pv-proxy-list">
+                                            <?php foreach ($proxies as $proxy): ?>
+                                                <?php
+                                                $proxyTone = Format::stateTone((string) $proxy['state']);
+                                                $proxyShared = ($proxy['bandwidth_scope'] ?? null) === 'interface';
+                                                $proxyIn = $proxy['bps_in'] === null || $proxy['bps_in'] === '' ? null : (int) $proxy['bps_in'];
+                                                $proxyOut = $proxy['bps_out'] === null || $proxy['bps_out'] === '' ? null : (int) $proxy['bps_out'];
+                                                ?>
+                                                <li>
+                                                    <span class="pv-pill <?= $h($proxyTone) ?>"><i class="pv-dot"></i><?= $h(Format::stateLabel((string) $proxy['state'])) ?></span>
+                                                    <span class="pv-proxy-name"><?= $h((string) ($proxy['label'] ?? $proxy['name'])) ?></span>
+                                                    <span class="pv-num"><?php if ($proxyShared): ?>shared<?php else: ?><?= $h(Format::rate($proxyIn)) ?> / <?= $h(Format::rate($proxyOut)) ?><?php endif; ?></span>
+                                                </li>
+                                            <?php endforeach; ?>
+                                        </ul>
+                                    </details>
+                                <?php endif; ?>
                             </td>
                             <td>
-                                <div><?= $h((string) ($tunnel['peer_ip'] ?? '—')) ?></div>
+                                <div><?= $h((string) ($tunnel['peer_ip'] ?? ($tunnel['peer_note'] ?? '—'))) ?></div>
                                 <div class="pv-sub"><?= $h((string) ($tunnel['monitor'] === 'on' ? 'monitor on' : ($tunnel['monitor'] === 'off' ? 'monitor off' : ''))) ?><?= $tunnel['monitor_status'] ? ' · '.$h((string) $tunnel['monitor_status']) : '' ?></div>
                             </td>
                             <td class="pv-num pv-in"><?= $h(Format::rate($tunnel['bps_in'] === null || $tunnel['bps_in'] === '' ? null : (int) $tunnel['bps_in'])) ?></td>

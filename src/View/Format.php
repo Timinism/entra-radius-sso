@@ -112,6 +112,7 @@ final class Format
             'active' => 'Up',
             'inactive' => 'Down',
             'init' => 'Init',
+            'partial' => 'Partial',
             default => $state !== '' ? ucfirst($state) : 'Unknown',
         };
     }
@@ -122,6 +123,7 @@ final class Format
             'active' => 'up',
             'inactive' => 'down',
             'init' => 'init',
+            'partial' => 'partial',
             default => 'down',
         };
     }

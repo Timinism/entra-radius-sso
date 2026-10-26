@@ -209,7 +209,9 @@ final class Lab
                 'display_name' => 'HQ-FW1',
                 'default_key' => 'lab-hq',
                 'tunnels' => [
-                    self::tunnel('HQ-to-DC', 10, 'active', '198.51.100.10', '203.0.113.10', 'tunnel.10', 'ethernet1/1', 'off', null, 'IKE-DC', 42_000_000, 18_000_000),
+                    self::tunnel('HQ-to-DC:servers', 10, 'active', '198.51.100.10', '203.0.113.10', 'tunnel.10', 'ethernet1/1', 'off', null, 'IKE-DC', 22_000_000, 9_000_000),
+                    self::tunnel('HQ-to-DC:users', 15, 'active', '198.51.100.10', '203.0.113.10', 'tunnel.10', 'ethernet1/1', 'off', null, 'IKE-DC', 12_000_000, 6_000_000),
+                    self::tunnel('HQ-to-DC:voice', 16, 'inactive', '198.51.100.10', '203.0.113.10', 'tunnel.10', 'ethernet1/1', 'on', 'down', 'IKE-DC', 0, 0, true),
                     self::tunnel('HQ-to-Austin', 11, 'active', '198.51.100.21', '203.0.113.10', 'tunnel.11', 'ethernet1/1', 'off', null, 'IKE-AUS', 6_400_000, 2_100_000),
                     self::tunnel('HQ-to-London', 12, 'active', '198.51.100.44', '203.0.113.10', 'tunnel.12', 'ethernet1/2', 'on', 'up', 'IKE-LON', 12_500_000, 9_800_000),
                     self::tunnel('HQ-to-Plant', 13, 'inactive', '198.51.100.80', '203.0.113.10', 'tunnel.13', 'ethernet1/1', 'on', 'down', 'IKE-PLANT', 0, 0, true),
