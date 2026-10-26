@@ -104,15 +104,20 @@ final class Lab
         return Html::dashboard($vm);
     }
 
-    public function device(int $deviceId): ?string
+    /**
+     * @param  array<string, mixed>  $query
+     */
+    public function deviceTab(int $deviceId, array $query = []): ?string
     {
         if (! isset(self::firewalls()[$deviceId])) {
             return null;
         }
-        $vm = Presenter::dashboard($this->repository->dashboard(), ['fw' => $deviceId], '/', 'America/Chicago', true, time());
-        $vm['page_url'] = '/';
+        $query['fw'] = $deviceId;
+        $vm = Presenter::dashboard($this->repository->dashboard(), $query, '/device/'.$deviceId.'/panos-vpn', 'America/Chicago', true, time());
+        $vm['device_base'] = '/device';
+        $vm['scope'] = 'device';
 
-        return Html::device($vm);
+        return Html::dashboard($vm);
     }
 
     public function settings(?string $notice): string

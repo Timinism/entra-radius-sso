@@ -8,7 +8,7 @@ The plugin page shows:
 - Throughput per tunnel, with decap as **in** and encap as **out**
 - GlobalProtect gateways and the users connected to each one
 
-The same summary is added to the overview of each PAN-OS device.
+On a PAN-OS device, open the **VPN** tab (`/device/{id}/panos-vpn`) for that firewall's tunnels and GlobalProtect users. The device overview stays clear of the list.
 
 ## Lab
 

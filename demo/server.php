@@ -56,21 +56,57 @@ if ($path === '/settings') {
     return;
 }
 
-if (preg_match('#^/device/(\d+)$#', $path, $match)) {
+if (preg_match('#^/device/(\d+)(?:/([a-z0-9-]+))?$#', $path, $match)) {
     $deviceId = (int) $match[1];
-    $html = $lab->device($deviceId);
-    if ($html === null) {
+    $tab = $match[2] ?? 'overview';
+    $known = Lab::firewalls()[$deviceId] ?? null;
+    if ($known === null) {
         http_response_code(404);
         echo layout('Unknown firewall', 'vpn', '<p>That firewall is not in the lab.</p>', false);
         return;
     }
-    $body = '<div class="device-page"><div>'.$html.'</div><aside><p class="kicker">Device</p><h2>'.$lab->firewallName($deviceId).'</h2><p>PAN-OS firewall</p><p class="muted">The block on the left is the plugin panel LibreNMS adds to the device overview.</p></aside></div>';
-    echo $partial ? $html : layout($lab->firewallName($deviceId), 'vpn', $body, true);
+    $name = (string) $known['display_name'];
+    $host = (string) $known['hostname'];
+    if ($tab === 'panos-vpn') {
+        $html = $lab->deviceTab($deviceId, $_GET);
+        echo $partial ? $html : layout($name.' VPN', 'vpn', deviceShell($deviceId, $name, $host, 'vpn', (string) $html), true);
+        return;
+    }
+    if ($tab !== 'overview') {
+        http_response_code(404);
+        echo layout('Not found', 'vpn', '<p>That device tab is not part of the lab.</p>', false);
+        return;
+    }
+    $overview = '<section class="device-overview"><p>PAN-OS firewall. Site-to-site tunnels and GlobalProtect users are on the VPN tab.</p></section>';
+    echo layout($name, 'vpn', deviceShell($deviceId, $name, $host, 'overview', $overview), false);
     return;
 }
 
 http_response_code(404);
 echo layout('Not found', 'vpn', '<p>That page is not part of the VPN plugin.</p>', false);
+
+function deviceShell(int $deviceId, string $name, string $host, string $tab, string $body): string
+{
+    $safeName = htmlspecialchars($name, ENT_QUOTES);
+    $safeHost = htmlspecialchars($host, ENT_QUOTES);
+    $overview = $tab === 'overview' ? ' class="on"' : '';
+    $vpn = $tab === 'vpn' ? ' class="on"' : '';
+
+    return <<<HTML
+<div class="device-shell">
+  <div class="device-head">
+    <p class="kicker">Device</p>
+    <h2>{$safeName}</h2>
+    <p class="muted">{$safeHost}</p>
+    <nav class="device-tabs" aria-label="Device tabs">
+      <a href="/device/{$deviceId}"{$overview}>Overview</a>
+      <a href="/device/{$deviceId}/panos-vpn"{$vpn}>VPN</a>
+    </nav>
+  </div>
+  <div class="device-body">{$body}</div>
+</div>
+HTML;
+}
 
 function layout(string $title, string $active, string $body, bool $live): string
 {
@@ -96,15 +132,20 @@ function layout(string $title, string $active, string $body, bool $live): string
   .pill { margin-left: auto; border: 1px solid #3d6284; border-radius: 999px; padding: 4px 10px; font-size: 12px; color: #d5e2ee; }
   main { max-width: 1180px; margin: 0 auto; padding: 18px 16px 48px; }
   .note { color: #5e6d7c; font-size: 13px; margin: 0 0 14px; }
-  .device-page { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(240px, 0.6fr); gap: 16px; align-items: start; }
-  .device-page aside { background: white; border: 1px solid #d5dee8; border-radius: 10px; padding: 14px 16px; }
-  .device-page h2 { margin: 4px 0 8px; font-size: 22px; }
+  .device-shell { background: white; border: 1px solid #d5dee8; border-radius: 10px; overflow: hidden; }
+  .device-head { padding: 16px 18px 0; }
+  .device-head h2 { margin: 4px 0 0; font-size: 22px; }
+  .device-tabs { display: flex; gap: 4px; margin-top: 14px; border-bottom: 1px solid #d5dee8; }
+  .device-tabs a { color: #3d5166; text-decoration: none; font-weight: 650; padding: 10px 14px; border-bottom: 2px solid transparent; }
+  .device-tabs a.on { color: #16324f; border-bottom-color: #16324f; }
+  .device-body { padding: 16px 18px 20px; }
+  .device-overview h2 { margin: 4px 0 8px; font-size: 22px; }
   .kicker { margin: 0; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: #5e6d7c; font-weight: 700; }
   .muted { color: #5e6d7c; }
   @media (max-width: 800px) {
     .labbar { height: auto; flex-wrap: wrap; padding: 10px 14px; }
     .pill { margin-left: 0; }
-    .device-page { grid-template-columns: 1fr; }
+    .device-tabs { overflow-x: auto; }
   }
 </style>
 </head>

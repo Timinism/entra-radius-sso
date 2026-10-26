@@ -283,6 +283,12 @@ $vm = Presenter::dashboard($repo->dashboard(), ['fw' => 7, 'state' => 'down', 'q
 $html = Html::dashboard($vm);
 check('down filter keeps the inactive tunnel', str_contains($html, 'class="pv-name">C') && ! str_contains($html, 'class="pv-name">A'));
 check('filtered page escapes markup', ! str_contains($html, '<script'));
+$vm['scope'] = 'device';
+$tab = Html::dashboard($vm);
+check('device tab drops the firewall switcher', ! str_contains($tab, 'All firewalls') && str_contains($tab, 'class="pv-name">C') && str_contains($tab, '/panos-vpn'));
+$missing = Presenter::dashboard($repo->dashboard(), ['fw' => 999], '/device/999/panos-vpn', 'America/Chicago', false, 1_010);
+$missing['scope'] = 'device';
+check('unpolled device tab explains the empty poll', str_contains(Html::dashboard($missing), 'No VPN poll is stored for this firewall yet'));
 $nasty = new Snapshot([[
     'pan_id' => '1', 'name' => '<script>alert(1)</script>', 'gateway' => null, 'local_ip' => null, 'peer_ip' => '198.51.100.50',
     'inner_if' => 'tunnel.1', 'outer_if' => null, 'state' => 'active', 'monitor' => 'off', 'monitor_status' => null,

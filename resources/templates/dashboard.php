@@ -32,6 +32,17 @@ $link = static function (array $overrides = []) use ($vm, $filters, $h): string 
     return $h($base.($qs === '' ? '' : (str_contains($base, '?') ? '&' : '?').$qs));
 };
 $deviceBase = rtrim((string) ($vm['device_base'] ?? '/device'), '/');
+$deviceScope = ($vm['scope'] ?? '') === 'device';
+$selectedFirewall = null;
+if ($deviceScope) {
+    foreach ($vm['firewalls'] as $row) {
+        if ((int) ($filters['fw'] ?? 0) === (int) $row['device_id']) {
+            $selectedFirewall = $row;
+            break;
+        }
+    }
+}
+$awaitingPoll = $deviceScope && $selectedFirewall === null;
 $upCount = 0;
 $downCount = 0;
 foreach ($vm['tunnels'] as $tunnel) {
@@ -59,9 +70,13 @@ foreach ($vm['tunnels'] as $tunnel) {
     </form>
 </header>
 
-<?php if (! $vm['configured']): ?>
+<?php if (! $vm['configured'] || $awaitingPoll): ?>
     <div class="pv-card pv-empty">
-        <p>No Palo Alto firewalls have been polled yet. Add an API key for each PAN-OS device in the plugin settings. The key only needs operational XML API access.</p>
+        <?php if ($awaitingPoll): ?>
+            <p>No VPN poll is stored for this firewall yet. Add its API key in the Palo Alto VPN plugin settings.</p>
+        <?php else: ?>
+            <p>No Palo Alto firewalls have been polled yet. Add an API key for each PAN-OS device in the plugin settings. The key only needs operational XML API access.</p>
+        <?php endif; ?>
     </div>
 <?php else: ?>
     <?php
@@ -95,6 +110,7 @@ foreach ($vm['tunnels'] as $tunnel) {
         <?php endforeach; ?>
     </section>
 
+    <?php if (! $deviceScope): ?>
     <nav class="pv-chips" aria-label="Firewalls">
         <a class="pv-chip<?= $filters['fw'] ? '' : ' active' ?>" href="<?= $link(['fw' => null, 'gw' => null]) ?>">
             <b>All firewalls</b>
@@ -115,6 +131,7 @@ foreach ($vm['tunnels'] as $tunnel) {
             </a>
         <?php endforeach; ?>
     </nav>
+    <?php endif; ?>
 
     <section class="pv-section">
         <div class="pv-section-head">
@@ -158,7 +175,7 @@ foreach ($vm['tunnels'] as $tunnel) {
                         ?>
                         <tr class="<?= $tone === 'up' ? '' : 'is-down' ?>">
                             <td><span class="pv-pill <?= $h($tone) ?>"><i class="pv-dot"></i><?= $h(Format::stateLabel((string) $tunnel['state'])) ?></span></td>
-                            <td><a href="<?= $h($deviceBase.'/'.(int) $tunnel['device_id']) ?>"><?= $h((string) $tunnel['device_name']) ?></a></td>
+                            <td><a href="<?= $h($deviceBase.'/'.(int) $tunnel['device_id'].'/panos-vpn') ?>"><?= $h((string) $tunnel['device_name']) ?></a></td>
                             <td>
                                 <div class="pv-name"><?= $h((string) $tunnel['name']) ?><?php if ($shared): ?><span class="pv-badge">shared iface</span><?php endif; ?></div>
                                 <div class="pv-sub"><?= $h((string) ($tunnel['inner_if'] ?? 'no tunnel interface')) ?><?= $tunnel['gateway'] ? ' · '.$h((string) $tunnel['gateway']) : '' ?></div>

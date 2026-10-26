@@ -20,7 +20,7 @@ class DeviceOverview implements DeviceOverviewHook
     public function handle(string $pluginName, Device $device): View
     {
         return view($pluginName.'::device-overview', [
-            'panel_html' => Pages::device((int) $device->device_id),
+            'panel_html' => Pages::overview((int) $device->device_id),
         ]);
     }
 }

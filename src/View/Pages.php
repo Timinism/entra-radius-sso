@@ -21,7 +21,22 @@ final class Pages
         return Html::dashboard($vm);
     }
 
-    public static function device(int $deviceId): string
+    /**
+     * Full tunnel and GlobalProtect view for the device VPN tab.
+     *
+     * @param  array<string, mixed>  $query
+     */
+    public static function device(int $deviceId, array $query = []): string
+    {
+        $query['fw'] = $deviceId;
+        $vm = Presenter::dashboard(self::data(), $query, url('device/'.$deviceId.'/panos-vpn'), self::timezone(), false, time());
+        $vm['device_base'] = url('device');
+        $vm['scope'] = 'device';
+
+        return Html::dashboard($vm);
+    }
+
+    public static function overview(int $deviceId): string
     {
         $vm = Presenter::dashboard(self::data(), ['fw' => $deviceId], url('plugin/panos-vpn'), self::timezone(), false, time());
         $vm['page_url'] = url('plugin/panos-vpn');

@@ -11,6 +11,7 @@ use LibreNMS\Interfaces\Plugins\Hooks\SettingsHook;
 use LibreNMS\Interfaces\Plugins\Hooks\SinglePageHook;
 use LibreNMS\Interfaces\Plugins\PluginManagerInterface;
 use LibreNmsPlugin\PanosVpn\Console\PollCommand;
+use LibreNmsPlugin\PanosVpn\Device\VpnTab;
 use LibreNmsPlugin\PanosVpn\Hooks\DeviceOverview;
 use LibreNmsPlugin\PanosVpn\Hooks\MenuEntry;
 use LibreNmsPlugin\PanosVpn\Hooks\Page;
@@ -31,7 +32,6 @@ class PanosVpnServiceProvider extends ServiceProvider
 
         $pluginManager->publishHook($pluginName, MenuEntryHook::class, MenuEntry::class);
         $pluginManager->publishHook($pluginName, SinglePageHook::class, Page::class);
-        $pluginManager->publishHook($pluginName, DeviceOverviewHook::class, DeviceOverview::class);
         $pluginManager->publishHook($pluginName, SettingsHook::class, Settings::class);
 
         $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
@@ -43,10 +43,28 @@ class PanosVpnServiceProvider extends ServiceProvider
 
         $this->loadViewsFrom(__DIR__.'/../resources/views', $pluginName);
         $this->loadRoutesFrom(__DIR__.'/../routes/web.php');
+        $this->registerDeviceTab($pluginManager, $pluginName);
 
         if (class_exists(\App\Events\DevicePolled::class)) {
             $this->app['events']->listen(\App\Events\DevicePolled::class, PollAfterDevice::class);
         }
+    }
+
+    private function registerDeviceTab(PluginManagerInterface $pluginManager, string $pluginName): void
+    {
+        $tabs = \App\View\Components\Device\PageTabs::class;
+        try {
+            if (class_exists($tabs)) {
+                $this->app['view']->addLocation(dirname(__DIR__).'/resources/device-tab');
+                $tabs::$tabsClasses['panos-vpn'] = VpnTab::class;
+
+                return;
+            }
+        } catch (\Throwable) {
+            // Fall through to the overview panel when this LibreNMS cannot take a device tab.
+        }
+
+        $pluginManager->publishHook($pluginName, DeviceOverviewHook::class, DeviceOverview::class);
     }
 
     private function listenForSettingsSaves(): void
