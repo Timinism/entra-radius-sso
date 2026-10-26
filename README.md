@@ -28,14 +28,20 @@ php tests/run.php
 
 ## Install in LibreNMS
 
-Copy this directory onto the LibreNMS host, then add it as a path repository:
+Clone the plugin onto the LibreNMS host. The path has to exist before Composer is told about it. LibreNMS does not ship a `composer` command on `PATH`; use `composer.phar` in `/opt/librenms`. A git checkout is a dev version, so the plugin is added with `@dev`.
 
 ```bash
+sudo mkdir -p /opt/librenms-plugins
+sudo git clone https://github.com/Timinism/PAN-VPN-Monitor.git /opt/librenms-plugins/panos-vpn
+sudo chown -R librenms:librenms /opt/librenms-plugins/panos-vpn
+
 cd /opt/librenms
-composer config repositories.panos-vpn '{"type":"path","url":"/opt/librenms-plugins/panos-vpn","symlink":true}'
-lnms plugin:add librenms-plugin/panos-vpn
-php artisan migrate
+sudo -u librenms ./composer.phar config repositories.panos-vpn '{"type":"path","url":"/opt/librenms-plugins/panos-vpn","symlink":true}'
+sudo -u librenms ./lnms plugin:add librenms-plugin/panos-vpn @dev
+sudo -u librenms php artisan migrate --force
 ```
+
+If `./composer.phar` is missing, the same config command works as `sudo -u librenms php scripts/composer_wrapper.php config ...`. Drop `sudo -u librenms` when the shell is already the `librenms` user. The directory can live somewhere other than `/opt/librenms-plugins/panos-vpn`; the `url` in the config command has to be that absolute path.
 
 The plugin registers itself as `panos-vpn` and is enabled on install. Open **Plugins → Palo Alto VPN**. API keys are edited from **Plugin Admin → Palo Alto VPN → Settings**, which is also at `/plugin/settings/panos-vpn`.
 

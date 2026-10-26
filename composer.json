@@ -3,6 +3,7 @@
     "description": "LibreNMS plugin that tracks Palo Alto site-to-site tunnels and GlobalProtect users.",
     "type": "library",
     "license": "MIT",
+    "version": "1.0.0",
     "require": {
         "php": "^8.2",
         "ext-curl": "*",
