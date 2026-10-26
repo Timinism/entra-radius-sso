@@ -161,15 +161,20 @@ final class Format
             return '';
         }
         $step = $width / ($count - 1);
-        $points = [];
+        $commands = [];
+        $drawing = false;
         foreach ($series as $index => $value) {
-            $yValue = $value ?? 0;
+            if ($value === null) {
+                $drawing = false;
+                continue;
+            }
             $x = round($index * $step, 2);
-            $y = round($height - ($yValue / $max) * ($height - 4) - 2, 2);
-            $points[] = $x.','.$y;
+            $y = round($height - ($value / $max) * ($height - 4) - 2, 2);
+            $commands[] = ($drawing ? 'L ' : 'M ').$x.','.$y;
+            $drawing = true;
         }
 
-        return 'M '.implode(' L ', $points);
+        return implode(' ', $commands);
     }
 
     /**

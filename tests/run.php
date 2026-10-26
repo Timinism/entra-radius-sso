@@ -15,6 +15,7 @@ use LibreNmsPlugin\PanosVpn\Polling\Rate;
 use LibreNmsPlugin\PanosVpn\Polling\Repository;
 use LibreNmsPlugin\PanosVpn\Polling\Schema;
 use LibreNmsPlugin\PanosVpn\Support\SettingsMerger;
+use LibreNmsPlugin\PanosVpn\View\Format;
 use LibreNmsPlugin\PanosVpn\View\Html;
 use LibreNmsPlugin\PanosVpn\View\Presenter;
 
@@ -295,6 +296,9 @@ $repo->save(8, 'html.example', 'HTML', $nasty, 3_010, 1, 14, 48);
 $page = Html::dashboard(Presenter::dashboard($repo->dashboard(), [], '/plugin/panos-vpn', 'America/Chicago', false, 3_010));
 check('tunnel name is escaped', str_contains($page, '&lt;script&gt;alert(1)&lt;/script&gt;') && ! str_contains($page, '<script>alert'));
 check('crypto label', str_contains($page, 'ESP / AES-GCM-256 / SHA-256'));
+$spark = Format::sparkline([100, null, 200], [10, 20, 30]);
+check('sparkline gaps on missing samples', substr_count($spark, 'M ') === 3);
+check('sparkline uses stroke classes', str_contains($spark, 'pv-spark-in') && str_contains($spark, 'pv-spark-out') && ! str_contains($spark, 'fill="'));
 
 echo "\n{$checks} checks, {$failures} failed\n";
 exit($failures === 0 ? 0 : 1);

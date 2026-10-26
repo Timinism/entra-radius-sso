@@ -241,6 +241,11 @@
 .pv-in { color: var(--in); font-weight: 650; }
 .pv-out { color: var(--out); font-weight: 650; }
 
+.pv-spark { display: block; overflow: visible; }
+.pv-spark path { fill: none; stroke-width: 1.75; stroke-linejoin: round; stroke-linecap: round; }
+.pv-spark-in { stroke: var(--in); }
+.pv-spark-out { stroke: var(--out); }
+
 .pv-badge {
     display: inline-block;
     margin-left: 6px;
