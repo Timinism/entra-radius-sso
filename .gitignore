@@ -1,0 +1,6 @@
+/vendor/
+/demo/data/
+/agent-tools/
+.phpunit.cache
+*.sqlite
+*.sqlite-journal
