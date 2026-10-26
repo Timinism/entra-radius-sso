@@ -20,6 +20,11 @@ use LibreNmsPlugin\PanosVpn\Listeners\PollAfterDevice;
 
 class PanosVpnServiceProvider extends ServiceProvider
 {
+    public function register(): void
+    {
+        $this->commands([PollCommand::class]);
+    }
+
     public function boot(PluginManagerInterface $pluginManager): void
     {
         $pluginName = 'panos-vpn';
@@ -30,16 +35,7 @@ class PanosVpnServiceProvider extends ServiceProvider
         $pluginManager->publishHook($pluginName, SettingsHook::class, Settings::class);
 
         $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
-        if ($this->app->runningInConsole()) {
-            $this->commands([PollCommand::class]);
-        }
-
-        $this->app->booted(function (): void {
-            $this->app['router']->pushMiddlewareToGroup('web', SettingsSync::class);
-        });
-        if (class_exists(\App\Models\Plugin::class)) {
-            \App\Models\Plugin::saving([SettingsSync::class, 'normalize']);
-        }
+        $this->listenForSettingsSaves();
 
         if (! $pluginManager->pluginEnabled($pluginName)) {
             return;
@@ -50,6 +46,20 @@ class PanosVpnServiceProvider extends ServiceProvider
 
         if (class_exists(\App\Events\DevicePolled::class)) {
             $this->app['events']->listen(\App\Events\DevicePolled::class, PollAfterDevice::class);
+        }
+    }
+
+    private function listenForSettingsSaves(): void
+    {
+        try {
+            $this->app->booted(function (): void {
+                $this->app['router']->pushMiddlewareToGroup('web', SettingsSync::class);
+            });
+            if (class_exists(\App\Models\Plugin::class)) {
+                \App\Models\Plugin::saving([SettingsSync::class, 'normalize']);
+            }
+        } catch (\Throwable) {
+            // A settings-save failure must not stop the plugin from publishing its hooks.
         }
     }
 }
