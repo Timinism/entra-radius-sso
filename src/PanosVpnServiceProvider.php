@@ -32,6 +32,7 @@ class PanosVpnServiceProvider extends ServiceProvider
 
         $pluginManager->publishHook($pluginName, MenuEntryHook::class, MenuEntry::class);
         $pluginManager->publishHook($pluginName, SinglePageHook::class, Page::class);
+        $pluginManager->publishHook($pluginName, DeviceOverviewHook::class, DeviceOverview::class);
         $pluginManager->publishHook($pluginName, SettingsHook::class, Settings::class);
 
         $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
@@ -43,28 +44,37 @@ class PanosVpnServiceProvider extends ServiceProvider
 
         $this->loadViewsFrom(__DIR__.'/../resources/views', $pluginName);
         $this->loadRoutesFrom(__DIR__.'/../routes/web.php');
-        $this->registerDeviceTab($pluginManager, $pluginName);
+        $this->registerDeviceTab();
 
         if (class_exists(\App\Events\DevicePolled::class)) {
             $this->app['events']->listen(\App\Events\DevicePolled::class, PollAfterDevice::class);
         }
     }
 
-    private function registerDeviceTab(PluginManagerInterface $pluginManager, string $pluginName): void
+    private function registerDeviceTab(): void
     {
         $tabs = \App\View\Components\Device\PageTabs::class;
         try {
-            if (class_exists($tabs)) {
-                $this->app['view']->addLocation(dirname(__DIR__).'/resources/device-tab');
-                $tabs::$tabsClasses['panos-vpn'] = VpnTab::class;
-
+            if (! class_exists($tabs)) {
                 return;
             }
+            $this->app['view']->addLocation(dirname(__DIR__).'/resources/device-tab');
+            $reflection = new \ReflectionClass($tabs);
+            if (! $reflection->hasProperty('tabsClasses')) {
+                return;
+            }
+            $property = $reflection->getProperty('tabsClasses');
+            $property->setAccessible(true);
+            $current = $property->getValue();
+            if (! is_array($current)) {
+                return;
+            }
+            $current['panos-vpn'] = VpnTab::class;
+            $property->setValue(null, $current);
+            VpnTab::$registered = true;
         } catch (\Throwable) {
-            // Fall through to the overview panel when this LibreNMS cannot take a device tab.
+            VpnTab::$registered = false;
         }
-
-        $pluginManager->publishHook($pluginName, DeviceOverviewHook::class, DeviceOverview::class);
     }
 
     private function listenForSettingsSaves(): void

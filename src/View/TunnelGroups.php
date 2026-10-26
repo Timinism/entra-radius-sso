@@ -16,13 +16,61 @@ final class TunnelGroups
      */
     public static function collapse(array $tunnels): array
     {
+        $byInterface = [];
+        $interfaceOrder = [];
+        $singletons = [];
+        foreach ($tunnels as $tunnel) {
+            $interface = trim((string) ($tunnel['inner_if'] ?? ''));
+            if ($interface === '') {
+                $singletons[] = $tunnel;
+                continue;
+            }
+            $key = 'if:'.(int) ($tunnel['device_id'] ?? 0).':'.$interface;
+            if (! isset($byInterface[$key])) {
+                $interfaceOrder[] = $key;
+                $byInterface[$key] = [];
+            }
+            $byInterface[$key][] = $tunnel;
+        }
+
+        $groups = [];
+        foreach ($interfaceOrder as $key) {
+            $members = $byInterface[$key];
+            if (count($members) < 2) {
+                $singletons[] = $members[0];
+                continue;
+            }
+            $groups[] = self::parent($members);
+        }
+
+        return array_merge($groups, self::collapseSingletons($singletons));
+    }
+
+    /**
+     * Proxy IDs that do not share a tunnel interface are still one tunnel when
+     * PAN-OS names them Tunnel:proxy, or when the interface was not reported.
+     *
+     * @param  list<array<string, mixed>>  $tunnels
+     * @return list<array<string, mixed>>
+     */
+    private static function collapseSingletons(array $tunnels): array
+    {
         $buckets = [];
         $order = [];
         foreach ($tunnels as $tunnel) {
-            $interface = trim((string) ($tunnel['inner_if'] ?? ''));
-            $key = $interface === ''
-                ? 'solo:'.(int) ($tunnel['device_id'] ?? 0).':'.(string) ($tunnel['name'] ?? '')
-                : 'if:'.(int) ($tunnel['device_id'] ?? 0).':'.$interface;
+            $device = (int) ($tunnel['device_id'] ?? 0);
+            $name = (string) ($tunnel['name'] ?? '');
+            $colon = strpos($name, ':');
+            if ($colon !== false && $colon > 0) {
+                $key = 'name:'.$device.':'.substr($name, 0, $colon);
+            } else {
+                $gateway = trim((string) ($tunnel['gateway'] ?? ''));
+                $peer = trim((string) ($tunnel['peer_ip'] ?? ''));
+                $interface = trim((string) ($tunnel['inner_if'] ?? ''));
+                $key = ($interface === '' && $gateway !== '' && $peer !== '')
+                    ? 'peer:'.$device.':'.$gateway.':'.$peer
+                    : 'solo:'.$device.':'.$name;
+            }
             if (! isset($buckets[$key])) {
                 $order[] = $key;
                 $buckets[$key] = [];

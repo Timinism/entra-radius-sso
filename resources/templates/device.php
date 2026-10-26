@@ -48,7 +48,22 @@ $page = (string) ($vm['page_url'] ?? $vm['base']);
                 <li>
                     <?php $tone = Format::stateTone((string) $tunnel['state']); ?>
                     <i class="pv-dot" style="color: <?= $tone === 'up' ? 'var(--up)' : ($tone === 'init' || $tone === 'partial' ? 'var(--init)' : 'var(--down)') ?>"></i>
-                    <span title="<?= $h((string) $tunnel['name']) ?>"><?= $h((string) $tunnel['name']) ?><?php if (($tunnel['proxy_ids'] ?? []) !== []): ?> · <?= count($tunnel['proxy_ids']) ?> proxy IDs<?php endif; ?></span>
+                    <span title="<?= $h((string) $tunnel['name']) ?>">
+                        <?= $h((string) $tunnel['name']) ?>
+                        <?php if (($tunnel['proxy_ids'] ?? []) !== []): ?>
+                            <details class="pv-proxy">
+                                <summary>Show <?= count($tunnel['proxy_ids']) ?> proxy IDs</summary>
+                                <ul class="pv-proxy-list">
+                                    <?php foreach ($tunnel['proxy_ids'] as $proxy): ?>
+                                        <li>
+                                            <span class="pv-pill <?= $h(Format::stateTone((string) $proxy['state'])) ?>"><?= $h(Format::stateLabel((string) $proxy['state'])) ?></span>
+                                            <span class="pv-proxy-name"><?= $h((string) ($proxy['label'] ?? $proxy['name'])) ?></span>
+                                        </li>
+                                    <?php endforeach; ?>
+                                </ul>
+                            </details>
+                        <?php endif; ?>
+                    </span>
                     <span class="peer"><?= $h((string) ($tunnel['peer_ip'] ?? '—')) ?></span>
                     <span class="pv-num"><?= $h(Format::rate($tunnel['bps_in'] === null || $tunnel['bps_in'] === '' ? null : (int) $tunnel['bps_in'])) ?> / <?= $h(Format::rate($tunnel['bps_out'] === null || $tunnel['bps_out'] === '' ? null : (int) $tunnel['bps_out'])) ?></span>
                 </li>

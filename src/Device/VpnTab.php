@@ -15,15 +15,11 @@ use LibreNmsPlugin\PanosVpn\View\Pages;
  */
 class VpnTab implements DeviceTab
 {
+    public static bool $registered = false;
+
     public function visible(Device $device): bool
     {
-        if (($device->os ?? '') !== 'panos') {
-            return false;
-        }
-
-        $user = function_exists('auth') ? auth()->user() : null;
-
-        return $user !== null && $user->can('global-read');
+        return strtolower((string) ($device->os ?? '')) === 'panos';
     }
 
     public function slug(): string

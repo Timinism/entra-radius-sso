@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace LibreNmsPlugin\PanosVpn\View;
 
+use LibreNmsPlugin\PanosVpn\Device\VpnTab;
 use LibreNmsPlugin\PanosVpn\Polling\LaravelConnection;
 use LibreNmsPlugin\PanosVpn\Polling\Repository;
 use Throwable;
@@ -38,6 +39,12 @@ final class Pages
 
     public static function overview(int $deviceId): string
     {
+        if (VpnTab::$registered) {
+            $href = htmlspecialchars(url('device/'.$deviceId.'/panos-vpn'), ENT_QUOTES);
+
+            return '<p><a href="'.$href.'">Palo Alto VPN</a> is on the VPN tab for this firewall.</p>';
+        }
+
         $vm = Presenter::dashboard(self::data(), ['fw' => $deviceId], url('plugin/panos-vpn'), self::timezone(), false, time());
         $vm['page_url'] = url('plugin/panos-vpn');
 

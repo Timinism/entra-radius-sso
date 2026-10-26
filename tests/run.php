@@ -264,6 +264,11 @@ $sharedGroup = TunnelGroups::collapse([
     ['device_id' => 1, 'name' => 'P2', 'state' => 'active', 'inner_if' => 'tunnel.5', 'gateway' => 'G', 'peer_ip' => '9.9.9.9', 'bps_in' => 80, 'bps_out' => 40, 'bandwidth_scope' => 'interface', 'device_name' => 'HQ', 'samples' => []],
 ]);
 check('shared proxy rate is counted once', (int) $sharedGroup[0]['bps_in'] === 80 && $sharedGroup[0]['shared_rate'] === true);
+$split = TunnelGroups::collapse([
+    ['device_id' => 1, 'name' => 'HQ-to-DC:servers', 'state' => 'active', 'inner_if' => 'tunnel.10', 'gateway' => 'IKE-DC', 'peer_ip' => '198.51.100.10', 'bps_in' => 1, 'bps_out' => 1, 'bandwidth_scope' => 'tunnel', 'device_name' => 'HQ', 'samples' => []],
+    ['device_id' => 1, 'name' => 'HQ-to-DC:users', 'state' => 'active', 'inner_if' => 'tunnel.11', 'gateway' => 'IKE-DC', 'peer_ip' => '198.51.100.10', 'bps_in' => 2, 'bps_out' => 2, 'bandwidth_scope' => 'tunnel', 'device_name' => 'HQ', 'samples' => []],
+]);
+check('colon names group across interfaces', count($split) === 1 && $split[0]['name'] === 'HQ-to-DC' && count($split[0]['proxy_ids']) === 2);
 
 $repo->fail(9, 'edge.example', 'Edge', 'Invalid credential', 1_010);
 $afterFail = $repo->dashboard();

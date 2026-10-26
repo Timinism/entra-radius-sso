@@ -179,9 +179,9 @@ foreach ($vm['tunnels'] as $tunnel) {
                                 $proxyUp++;
                             }
                         }
-                        $proxySummary = count($proxies).' proxy IDs';
+                        $proxySummary = 'Show '.count($proxies).' proxy IDs';
                         if ($proxies !== [] && $proxyUp !== count($proxies)) {
-                            $proxySummary = $proxyUp.' of '.count($proxies).' proxy IDs up';
+                            $proxySummary = 'Show proxy IDs ('.$proxyUp.' of '.count($proxies).' up)';
                         }
                         ?>
                         <tr class="<?= $tone === 'up' ? '' : 'is-down' ?>">
