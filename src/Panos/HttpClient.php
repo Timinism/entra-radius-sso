@@ -55,7 +55,6 @@ final class HttpClient implements Client
         $body = curl_exec($curl);
         $status = (int) curl_getinfo($curl, CURLINFO_HTTP_CODE);
         $error = curl_error($curl);
-        curl_close($curl);
 
         if ($body === false || $status >= 400 || $status === 0) {
             $detail = $error !== '' ? $error : 'HTTP '.$status;
