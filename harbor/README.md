@@ -17,7 +17,13 @@ Open http://127.0.0.1:3847
 
 The web console listens on port 3847. RADIUS authentication listens on UDP 11812 and accounting on UDP 11813. Both stay up when you run `npm run dev` or `npm start`.
 
-`npm test` checks the RADIUS codec, group matching, and a sample Cisco accept.
+`npm test` checks the RADIUS codec, group matching, a sample Cisco accept, and the component updater.
+
+## Components
+
+**Components** lists Next.js, React, and the other libraries this app is built with. Harbor reads the latest stable release from the npm registry, then chooses the newest version the rest of the set still supports. Next.js and `eslint-config-next` stay on a release both packages publish. TypeScript stops at the newest release the Next.js lint stack accepts, even when the TypeScript package has a newer major.
+
+Update all installs those releases into this checkout. A built deployment can show the comparison, and the install runs where `npm` can write `package.json`. Set `HARBOR_COMPONENT_UPDATES=0` to keep the check and skip the install.
 
 ## What to click
 

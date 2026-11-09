@@ -15,6 +15,7 @@ const NAV = [
   { href: "/audit", label: "Audit" },
   { href: "/bench", label: "Test bench" },
   { href: "/guide", label: "Gear setup" },
+  { href: "/components", label: "Components" },
 ] as const;
 
 type Session = {
