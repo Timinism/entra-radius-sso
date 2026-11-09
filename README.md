@@ -1,3 +1,15 @@
+# Harbor
+
+Entra sign-in for Cisco and Palo Alto gear that still speaks RADIUS. The app, and how to run it, is in [harbor/README.md](harbor/README.md).
+
+```bash
+cd harbor
+npm install
+npm run dev
+```
+
+Open http://127.0.0.1:3847
+
 # Palo Alto VPN for LibreNMS
 
 LibreNMS plugin that polls PAN-OS firewalls for site-to-site VPN tunnels and GlobalProtect sessions.
