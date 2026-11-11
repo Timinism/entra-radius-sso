@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import { IBM_Plex_Mono, Instrument_Sans, Instrument_Serif } from "next/font/google";
 
@@ -35,7 +36,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${sans.variable} ${serif.variable} ${mono.variable} dark h-full antialiased`}
     >
       <body className="min-h-full">
-        <Shell>{children}</Shell>
+        <Suspense fallback={<div className="min-h-full" />}>
+          <Shell>{children}</Shell>
+        </Suspense>
       </body>
     </html>
   );

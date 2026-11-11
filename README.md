@@ -16,6 +16,10 @@ Open http://127.0.0.1:3847
 
 The web console listens on port 3847. RADIUS authentication listens on UDP 11812 and accounting on UDP 11813. Both stay up when you run `npm run dev` or `npm start`.
 
+## Docker Compose
+
+`docker compose up --build` runs the same app next to Postgres. The console is at http://127.0.0.1:3847. RADIUS authentication is UDP 11812 and accounting is UDP 11813, published on the host. Devices, policies, and the audit are stored in Postgres. The container creates the table on first use. The sample Northline directory is used until `ENTRA_TENANT_ID`, `ENTRA_CLIENT_ID`, and `ENTRA_CLIENT_SECRET` are set in the environment you launch Compose from. `HARBOR_DB_PASSWORD` overrides the local database password, which defaults to `harbor`.
+
 `npm test` checks the RADIUS codec, group matching, a sample Cisco accept, and the component updater.
 
 ## Components
