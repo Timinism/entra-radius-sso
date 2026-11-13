@@ -1,26 +1,24 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
-import { IBM_Plex_Mono, Instrument_Sans, Instrument_Serif } from "next/font/google";
+import { Fraunces, Geist, Geist_Mono } from "next/font/google";
 
 import { Shell } from "@/components/shell";
 
 import "./globals.css";
 
-const sans = Instrument_Sans({
+const sans = Geist({
   subsets: ["latin"],
-  variable: "--font-instrument-sans",
+  variable: "--font-geist-sans",
 });
 
-const serif = Instrument_Serif({
+const mono = Geist_Mono({
   subsets: ["latin"],
-  weight: "400",
-  variable: "--font-instrument-serif",
+  variable: "--font-geist-mono",
 });
 
-const mono = IBM_Plex_Mono({
+const display = Fraunces({
   subsets: ["latin"],
-  weight: ["400", "500"],
-  variable: "--font-ibm-mono",
+  variable: "--font-display",
 });
 
 export const metadata: Metadata = {
@@ -33,7 +31,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${sans.variable} ${serif.variable} ${mono.variable} dark h-full antialiased`}
+      className={`${sans.variable} ${mono.variable} ${display.variable} dark h-full antialiased`}
     >
       <body className="min-h-full">
         <Suspense fallback={<div className="min-h-full" />}>

@@ -100,14 +100,14 @@ function ApprovalView() {
       {error ? <div className="mt-4"><ErrorNote>{error.message}</ErrorNote></div> : null}
       {!approval && !error ? <p className="mt-8 text-sm text-muted-foreground">Loading this sign-in…</p> : null}
       {approval ? (
-        <article className="mt-4 rounded-2xl border border-border bg-card/80 p-5 md:p-8">
+        <article className="mt-4 rounded-2xl bg-card ring-1 ring-foreground/10 p-5 md:p-8">
           <div className="flex items-center gap-3">
             <VendorMark vendor={approval.vendor} />
             <p className="font-mono text-xs tracking-[0.14em] text-muted-foreground uppercase">
               {approval.service === "globalprotect" ? "GlobalProtect" : approval.os === "panorama" ? "Panorama admin" : "Device admin"}
             </p>
           </div>
-          <h1 className="mt-4 font-serif text-4xl tracking-tight md:text-5xl">{approval.deviceName}</h1>
+          <h1 className="mt-4 font-display text-4xl tracking-tight md:text-5xl">{approval.deviceName}</h1>
           <p className="mt-2 text-lg">
             wants to log in as <span className="font-mono">{approval.username}</span>
           </p>
@@ -147,7 +147,7 @@ function ApprovalView() {
           ) : null}
           {approval.result ? (
             <div className="mt-8">
-              <h2 className="font-serif text-2xl">RADIUS reply</h2>
+              <h2 className="font-display text-2xl">RADIUS reply</h2>
               <p className="mt-1 text-sm text-muted-foreground">{approval.result.reason}</p>
               {approval.signedInUpn ? (
                 <p className="mt-1 font-mono text-xs text-muted-foreground">

@@ -44,7 +44,7 @@ export function PageIntro({
     <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
       <div>
         <p className="font-mono text-[11px] tracking-[0.16em] text-muted-foreground uppercase">{kicker}</p>
-        <h1 className="mt-1 font-serif text-4xl tracking-tight">{title}</h1>
+        <h1 className="mt-1 font-display text-4xl tracking-tight">{title}</h1>
       </div>
       {children}
     </header>
@@ -52,13 +52,13 @@ export function PageIntro({
 }
 
 export function Panel({ children, className }: { children: React.ReactNode; className?: string }) {
-  return <section className={cn("rounded-xl border border-border bg-card/80", className)}>{children}</section>;
+  return <section className={cn("rounded-xl bg-card ring-1 ring-foreground/10", className)}>{children}</section>;
 }
 
 export function Empty({ title, children }: { title: string; children: string }) {
   return (
     <Panel className="px-5 py-8">
-      <h2 className="font-serif text-2xl">{title}</h2>
+      <h2 className="font-display text-2xl tracking-tight">{title}</h2>
       <p className="mt-2 max-w-xl text-sm text-muted-foreground">{children}</p>
     </Panel>
   );

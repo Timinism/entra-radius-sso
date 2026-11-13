@@ -115,7 +115,7 @@ export default function ComponentsPage() {
         <p className="mb-4 rounded-xl border border-good/40 bg-good/10 px-4 py-3 text-sm text-good">{notice}</p>
       ) : null}
       {view && !view.apply.enabled ? (
-        <p className="mb-4 rounded-xl border border-border bg-card/80 px-4 py-3 text-sm text-muted-foreground">
+        <p className="mb-4 rounded-xl bg-card ring-1 ring-foreground/10 px-4 py-3 text-sm text-muted-foreground">
           {view.apply.reason}
         </p>
       ) : null}
@@ -131,7 +131,7 @@ export default function ComponentsPage() {
             <span>Node {view.node}</span>
             <span>Checked {formatCtDate(view.checkedAt)}</span>
           </div>
-          <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-card/80">
+          <ul className="divide-y divide-border overflow-hidden rounded-xl bg-card ring-1 ring-foreground/10">
             {view.components.map((row) => (
               <li key={row.name} className="grid gap-2 px-4 py-3 md:grid-cols-[minmax(0,1.5fr)_7rem_7rem_7rem_5rem] md:items-center">
                 <div className="min-w-0">

@@ -73,7 +73,7 @@ export default function BoardPage() {
       ) : null}
       <div className="grid gap-4 lg:grid-cols-[1.4fr_0.8fr]">
         <Panel className="p-4">
-          <h2 className="mb-3 font-serif text-2xl">Recent decisions</h2>
+          <h2 className="mb-3 font-display text-2xl">Recent decisions</h2>
           {data && data.events.length === 0 ? (
             <Empty title="Quiet so far">
               Nothing has authenticated today. Send a request from the test bench, or point a lab switch at the UDP listener.
@@ -94,7 +94,7 @@ export default function BoardPage() {
         </Panel>
         <div className="space-y-4">
           <Panel className="p-4">
-            <h2 className="mb-3 font-serif text-2xl">What the gear receives</h2>
+            <h2 className="mb-3 font-display text-2xl">What the gear receives</h2>
             <AttrTable
               rows={
                 [
@@ -109,7 +109,7 @@ export default function BoardPage() {
             </p>
           </Panel>
           <Panel className="p-4">
-            <h2 className="mb-2 font-serif text-2xl">Listener</h2>
+            <h2 className="mb-2 font-display text-2xl">Listener</h2>
             <p className="text-sm text-muted-foreground">
               {data?.listener.bound
                 ? `Accepting RADIUS on UDP ${data.listener.authPort}. Accounting is the next port.`
@@ -128,7 +128,7 @@ function Stat({ label, value }: { label: string; value: number | undefined }) {
   return (
     <Panel className="px-4 py-3">
       <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="mt-1 font-serif text-3xl tabular-nums">{value ?? "–"}</p>
+      <p className="mt-1 font-display text-3xl tabular-nums">{value ?? "–"}</p>
     </Panel>
   );
 }

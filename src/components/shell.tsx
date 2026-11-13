@@ -32,14 +32,14 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-full md:grid md:grid-cols-[232px_1fr]">
-      <aside className="border-b border-border md:sticky md:top-0 md:flex md:h-screen md:flex-col md:border-r md:border-b-0">
+      <aside className="border-b border-sidebar-border bg-sidebar md:sticky md:top-0 md:flex md:h-screen md:flex-col md:border-r md:border-b-0">
         <div className="flex items-center gap-3 px-4 py-4 md:px-5">
           <span className="relative grid size-9 place-items-center">
             <span className="absolute size-7 rounded-full border-2 border-primary" />
             <span className="h-0.5 w-4 rounded-full bg-primary" />
           </span>
           <div>
-            <p className="font-serif text-2xl leading-none tracking-tight">Harbor</p>
+            <p className="font-display text-2xl leading-none tracking-tight">Harbor</p>
             <p className="mt-1 font-mono text-[10px] tracking-[0.16em] text-muted-foreground uppercase">
               Entra for RADIUS
             </p>
@@ -53,8 +53,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "flex shrink-0 items-center justify-between rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground",
-                  active && "bg-muted text-foreground",
+                  "flex shrink-0 items-center justify-between rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                  active && "bg-sidebar-accent text-sidebar-accent-foreground",
                 )}
               >
                 <span>{item.label}</span>
@@ -86,7 +86,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
         ) : null}
         {signedOut ? (
           <main className="mx-auto max-w-lg px-4 py-24">
-            <h1 className="font-serif text-4xl">Sign in to open Harbor</h1>
+            <h1 className="font-display text-4xl">Sign in to open Harbor</h1>
             <p className="mt-3 text-muted-foreground">
               The console is for the operator who manages Cisco and Palo Alto sign-in. Your Cursor session is what
               opens it.

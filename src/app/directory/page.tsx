@@ -77,7 +77,7 @@ export default function DirectoryPage() {
       )}
       <div className="grid gap-4 lg:grid-cols-2">
         <Panel className="space-y-3 p-4">
-          <h2 className="font-serif text-2xl">Entra app</h2>
+          <h2 className="font-display text-2xl">Entra app</h2>
           <Field label="Tenant ID">
             <Input
               value={settings?.tenantId ?? ""}
@@ -141,13 +141,13 @@ export default function DirectoryPage() {
           </div>
         </Panel>
         <Panel className="p-4">
-          <h2 className="font-serif text-2xl">Break glass</h2>
+          <h2 className="font-display text-2xl">Break glass</h2>
           <p className="mt-2 text-sm text-muted-foreground">
             Username <span className="font-mono">breakglass</span>. The password is checked inside Harbor and is never
             sent to Entra. Every use is an audit event. This sample password is not a tenant credential.
           </p>
           <p className="mt-3 font-mono text-sm">{settings?.breakglassPassword || "Generating…"}</p>
-          <h2 className="mt-6 font-serif text-2xl">Sample people</h2>
+          <h2 className="mt-6 font-display text-2xl">Sample people</h2>
           <ul className="mt-3 divide-y divide-border">
             {data?.users.filter((user) => !user.emergency).map((user) => (
               <li key={user.id} className="py-3">

@@ -36,7 +36,7 @@ export default function ApprovalsPage() {
           When a device sends an Access-Request, it shows up here with the username and a countdown.
         </Empty>
       ) : null}
-      <ul className="mt-4 divide-y divide-border overflow-hidden rounded-xl border border-border bg-card/80">
+      <ul className="mt-4 divide-y divide-border overflow-hidden rounded-xl bg-card ring-1 ring-foreground/10">
         {rows.map((row) => (
           <li key={row.id}>
             <Link href={`/approvals/${row.id}`} className="flex flex-wrap items-center gap-3 px-4 py-3 hover:bg-muted/60">

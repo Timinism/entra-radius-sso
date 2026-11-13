@@ -106,11 +106,11 @@ export default function BenchPage() {
         </Panel>
         <div className="space-y-4">
           <Panel className="p-4">
-            <h2 className="mb-2 font-serif text-2xl">Request</h2>
+            <h2 className="mb-2 font-display text-2xl">Request</h2>
             {result ? <AttrTable rows={result.request.attributes} /> : <p className="text-sm text-muted-foreground">Nothing sent yet.</p>}
           </Panel>
           <Panel className="p-4">
-            <h2 className="mb-2 font-serif text-2xl">Reply</h2>
+            <h2 className="mb-2 font-display text-2xl">Reply</h2>
             {result?.pending && result.approval ? (
               <div>
                 <p className="text-sm">The device would be waiting. Finish the sign-in, then the listener sends this reply.</p>

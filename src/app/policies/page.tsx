@@ -101,7 +101,7 @@ export default function PoliciesPage() {
       {error ? <ErrorNote>{error.message}</ErrorNote> : null}
       <ol className="space-y-2">
         {policies.map((policy, index) => (
-          <li key={policy.id} className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-card/80 px-4 py-3">
+          <li key={policy.id} className="flex flex-wrap items-center gap-3 rounded-xl bg-card ring-1 ring-foreground/10 px-4 py-3">
             <span className="w-8 font-mono text-xs text-muted-foreground">{policy.priority}</span>
             <VendorMark vendor={policy.vendor} />
             <div className="min-w-0 flex-1">

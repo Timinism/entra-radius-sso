@@ -106,7 +106,7 @@ export default function DevicesPage() {
         for the lab until you replace them.
       </p>
       {error ? <ErrorNote>{error.message}</ErrorNote> : null}
-      <div className="overflow-x-auto rounded-xl border border-border bg-card/80">
+      <div className="overflow-x-auto rounded-xl bg-card ring-1 ring-foreground/10">
         <table className="w-full min-w-[760px] text-left text-sm">
           <thead className="text-xs text-muted-foreground">
             <tr>
