@@ -12,7 +12,7 @@ import { ciscoSnippet, paloAltoSteps } from "@/lib/snippets";
 import type { Device } from "@/lib/types";
 
 type Directory = { settings: { radiusHost: string; timeoutSeconds: number } };
-type Session = { listener: { authPort: number; acctPort: number; bound: boolean } };
+type Session = { listener: { authPort: number; acctPort: number; tlsPort?: number; bound: boolean; tlsBound?: boolean } };
 
 export default function GuidePage() {
   const devices = usePoll<{ devices: Device[] }>("/api/devices", 0);
@@ -25,6 +25,7 @@ export default function GuidePage() {
   const device = devices.data?.devices.find((item) => item.id === deviceId) ?? devices.data?.devices[0];
   const authPort = session.data?.listener.authPort ?? 11812;
   const acctPort = session.data?.listener.acctPort ?? 11813;
+  const tlsPort = session.data?.listener.tlsPort ?? 11814;
   const host = hostDraft ?? directory.data?.settings.radiusHost ?? "";
 
   async function saveHost() {
@@ -46,10 +47,10 @@ export default function GuidePage() {
     <main className="mx-auto w-full max-w-6xl px-4 py-6 md:px-8 md:py-8">
       <PageIntro kicker="Keep the protocol, change the sign-in" title="Gear setup" />
       <p className="mb-6 max-w-3xl text-sm leading-6 text-muted-foreground">
-        Point the device at Harbor with PAP. The password someone types at the CLI is not checked against Entra. Harbor
-        holds the RADIUS request, for {directory.data?.settings.timeoutSeconds ?? 45} seconds by default, while that
-        person finishes the approval in the browser. Raise the device timeout so the CLI waits that long, and leave a
-        local admin on the box before you cut over.
+        SSO, local passwords, and SSL certificates all arrive as RADIUS. SSO holds the request for{" "}
+        {directory.data?.settings.timeoutSeconds ?? 45} seconds while the person finishes in the browser. A local
+        password set on Directory is checked here and answers immediately. SSL is RADIUS over TLS on TCP {tlsPort}, and
+        a client certificate issued on Directory is the SSL login. Leave a local admin on the box before you cut over.
       </p>
       <div className="mb-4 grid gap-3 md:grid-cols-[1fr_1fr_auto] md:items-end">
         <Label className="grid gap-1.5">
@@ -84,10 +85,11 @@ export default function GuidePage() {
             <p className="mb-3 text-sm text-muted-foreground">
               <code className="font-mono">aaa authorization exec</code> is what applies <code className="font-mono">shell:priv-lvl</code>.
               Privilege 15 is unrestricted exec. Privilege 1 and 7 only do what you have already permitted at those levels.
-              CHAP and MS-CHAPv2 will not work. IOS login uses PAP for this RADIUS server.
+              CHAP and MS-CHAPv2 will not work. IOS login uses PAP for this RADIUS server. The SSL server uses the
+              Harbor CA from Directory.
             </p>
             {device && device.vendor === "cisco" ? (
-              <pre className="overflow-x-auto rounded-lg bg-background/70 p-4 font-mono text-[13px] leading-6">{ciscoSnippet(device, snippetHost, authPort, acctPort)}</pre>
+              <pre className="overflow-x-auto rounded-lg bg-background/70 p-4 font-mono text-[13px] leading-6">{ciscoSnippet(device, snippetHost, authPort, acctPort, tlsPort)}</pre>
             ) : (
               <p className="text-sm text-muted-foreground">Choose a Cisco device to fill in its secret and source address.</p>
             )}
@@ -102,7 +104,7 @@ export default function GuidePage() {
             </p>
             {device && device.vendor === "paloalto" ? (
               <ol className="list-decimal space-y-2 pl-5 text-sm">
-                {paloAltoSteps(device, snippetHost, authPort).map((step) => (
+                {paloAltoSteps(device, snippetHost, authPort, tlsPort).map((step) => (
                   <li key={step}>{step}</li>
                 ))}
               </ol>

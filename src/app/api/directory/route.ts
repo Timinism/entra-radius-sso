@@ -7,7 +7,7 @@ export async function GET(request: Request) {
   if (isResponse(identity)) return identity;
   const db = await readState(dataStage(identity));
   return json({
-    users: db.users.map(presentUser),
+    users: db.users.map((user) => presentUser(user, db.settings.shownLocalPasswords[user.id] ?? null)),
     settings: presentSettings(db.settings),
     redirectPath: "/api/entra/callback",
   });

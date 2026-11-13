@@ -9,7 +9,7 @@ import type { AuthEvent, DisplayAttr } from "@/lib/types";
 
 type Overview = {
   settings: { mode: "entra" | "sample" };
-  listener: { bound: boolean; authPort: number; error: string | null };
+  listener: { bound: boolean; authPort: number; tlsBound?: boolean; tlsPort?: number; error: string | null; tlsError?: string | null };
   counts: { accept: number; reject: number; pending: number; devices: number };
   pending: Array<{
     id: string;
@@ -32,8 +32,8 @@ export default function BoardPage() {
         <ModeBadge mode={data?.settings.mode} />
       </PageIntro>
       <p className="mb-6 max-w-2xl text-sm leading-6 text-muted-foreground">
-        Cisco and Palo Alto keep sending RADIUS. Harbor holds the request, the person signs in with Microsoft Entra,
-        and the reply carries the privilege level or admin role.
+        Cisco and Palo Alto keep sending RADIUS. SSO holds the request for a browser sign-in. A local password or an
+        SSL certificate answers immediately. The reply carries the privilege level or admin role.
       </p>
       {error ? <ErrorNote>{error.message}</ErrorNote> : null}
       {data?.settings.mode === "sample" ? (
@@ -112,7 +112,7 @@ export default function BoardPage() {
             <h2 className="mb-2 font-display text-2xl">Listener</h2>
             <p className="text-sm text-muted-foreground">
               {data?.listener.bound
-                ? `Accepting RADIUS on UDP ${data.listener.authPort}. Accounting is the next port.`
+                ? `Accepting RADIUS on UDP ${data.listener.authPort}. Accounting is the next port.${data.listener.tlsBound ? ` SSL is TCP ${data.listener.tlsPort}.` : ""}`
                 : data?.listener.error
                   ? data.listener.error
                   : "The UDP listener is not bound in this process. The test bench still runs the same decision."}

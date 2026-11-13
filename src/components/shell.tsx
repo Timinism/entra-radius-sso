@@ -22,7 +22,7 @@ type Session = {
   viewer: { name: string; email: string; simulated: boolean; stage: "production" | "preview" };
   mode: "entra" | "sample";
   pending: number;
-  listener: { bound: boolean; authPort: number; acctPort: number; error: string | null };
+  listener: { bound: boolean; authPort: number; acctPort: number; error: string | null; tlsBound?: boolean; tlsPort?: number };
 };
 
 export function Shell({ children }: { children: React.ReactNode }) {
@@ -73,6 +73,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
             {session.data?.listener.bound
               ? `UDP ${session.data.listener.authPort} / ${session.data.listener.acctPort}`
               : "UDP listener idle"}
+            {session.data?.listener.tlsBound ? ` · TLS ${session.data.listener.tlsPort}` : ""}
           </p>
           <p>{session.data?.mode === "entra" ? "Microsoft Entra" : "Sample directory"}</p>
           <p className="truncate">{session.data?.viewer.name ?? "Operator"}</p>

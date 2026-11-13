@@ -17,7 +17,7 @@ import {
 } from "./radius";
 import { verifyPassword } from "./seed";
 import { readState, withState } from "./store";
-import type { AdminService, Approval, AuthEvent, AuthResult, Database, Device, DisplayAttr, Stage } from "./types";
+import type { AdminService, Approval, AuthEvent, AuthResult, Database, Device, DisplayAttr, LoginMethod, Stage } from "./types";
 import { usernamesMatch } from "./username";
 
 export type HandleResult =
@@ -27,18 +27,40 @@ export type HandleResult =
 
 const BREAKGLASS_UPN = "breakglass@northline.example";
 
+export type PacketMeta = {
+  tlsUserUpn?: string | null;
+  tlsDeviceName?: string | null;
+};
+
 function loopback(ip: string): boolean {
   return ip === "127.0.0.1" || ip === "::1" || ip === "::ffff:127.0.0.1";
 }
 
-function deviceFor(devices: Device[], sourceIp: string, attributes: WireAttr[]): Device | null {
+function deviceFor(
+  devices: Device[],
+  sourceIp: string,
+  attributes: WireAttr[],
+  tlsDeviceName?: string | null,
+): Device | null {
   const enabled = devices.filter((device) => device.enabled);
+  if (tlsDeviceName) {
+    const named = enabled.find((device) => device.name === tlsDeviceName || device.id === tlsDeviceName);
+    if (named) {
+      const nasIp = nasIpOf(attributes);
+      if (!nasIp || nasIp === named.nasIp) return named;
+    }
+  }
   const direct = enabled.find((device) => device.nasIp === sourceIp);
   if (direct) return direct;
   if (!loopback(sourceIp)) return null;
   const nasIp = nasIpOf(attributes);
   if (!nasIp) return null;
   return enabled.find((device) => device.nasIp === nasIp) ?? null;
+}
+
+function allows(device: Device, method: LoginMethod): boolean {
+  const logins = device.logins?.length ? device.logins : (["ssl", "sso", "local"] as LoginMethod[]);
+  return logins.includes(method);
 }
 
 function shortReject(message: string): WireAttr[] {
@@ -50,11 +72,12 @@ export async function handlePacket(
   packet: Buffer,
   sourceIp: string,
   via: "radius" | "bench",
+  meta: PacketMeta = {},
 ): Promise<HandleResult> {
   const decoded = decodePacket(packet);
   if ("error" in decoded) return { kind: "drop", reason: decoded.error };
   return withState(stage, (db) => {
-    const device = deviceFor(db.devices, sourceIp, decoded.attributes);
+    const device = deviceFor(db.devices, sourceIp, decoded.attributes, meta.tlsDeviceName);
     if (!device) return { kind: "drop" as const, reason: "No device is registered for this source address." };
 
     const authenticatorStatus = messageAuthenticatorStatus(packet, device.sharedSecret);
@@ -123,18 +146,6 @@ export async function handlePacket(
       return signedReject(db, device, decoded, sourceIp, via, authenticatorStatus === "valid", "Denied by Harbor.", service.error);
     }
 
-    if (via === "radius") {
-      const existing = db.approvals.find(
-        (approval) =>
-          approval.status === "pending" &&
-          approval.source === "radius" &&
-          approval.deviceId === device.id &&
-          approval.username === username &&
-          approval.radiusIdentifier === decoded.identifier,
-      );
-      if (existing) return { kind: "pending" as const, approval: existing };
-    }
-
     const passwordAttr = decoded.attributes.find((attr) => attr.type === 2 && attr.vendorId === undefined);
     const password = passwordAttr
       ? revealPassword(passwordAttr.value, device.sharedSecret, decoded.authenticator)
@@ -178,6 +189,50 @@ export async function handlePacket(
       );
     }
 
+    const immediate = immediateLogin(db, username, password, meta.tlsUserUpn ?? null);
+    if (immediate.kind === "ssl-mismatch") {
+      return signedReject(db, device, decoded, sourceIp, via, authenticatorStatus === "valid", "Denied by Harbor.", "The SSL certificate does not match the username.", username, service);
+    }
+    if (immediate.kind === "ssl-missing") {
+      return signedReject(db, device, decoded, sourceIp, via, authenticatorStatus === "valid", "Denied by Harbor.", "No SSL certificate is issued for this username.", username, service);
+    }
+    if (immediate.kind === "accept" && allows(device, immediate.method)) {
+      return finishNow(db, {
+        device,
+        username,
+        service,
+        sourceIp,
+        via,
+        decodedIdentifier: decoded.identifier,
+        requestAuthenticator: decoded.authenticator,
+        includeMessageAuthenticator: authenticatorStatus === "valid",
+        requestAttributes: describeAttributes(decoded.attributes),
+        groups: immediate.groups,
+        method: immediate.method,
+        signedInUpn: immediate.upn,
+        status: "approved",
+      });
+    }
+    if (immediate.kind === "accept" && immediate.method === "ssl") {
+      return signedReject(db, device, decoded, sourceIp, via, authenticatorStatus === "valid", "Denied by Harbor.", "SSL logins are turned off for this device.", username, service);
+    }
+
+    if (!allows(device, "sso")) {
+      return signedReject(db, device, decoded, sourceIp, via, authenticatorStatus === "valid", "Denied by Harbor.", "This device does not accept that login.", username, service);
+    }
+
+    if (via === "radius") {
+      const existing = db.approvals.find(
+        (approval) =>
+          approval.status === "pending" &&
+          approval.source === "radius" &&
+          approval.deviceId === device.id &&
+          approval.username === username &&
+          approval.radiusIdentifier === decoded.identifier,
+      );
+      if (existing) return { kind: "pending" as const, approval: existing };
+    }
+
     const now = new Date();
     const approval: Approval = {
       id: randomUUID(),
@@ -209,6 +264,29 @@ export async function handlePacket(
     db.approvals.unshift(approval);
     return { kind: "pending" as const, approval };
   });
+}
+
+function immediateLogin(
+  db: Database,
+  username: string,
+  password: string,
+  tlsUserUpn: string | null,
+):
+  | { kind: "none" }
+  | { kind: "ssl-mismatch" | "ssl-missing" }
+  | { kind: "accept"; method: "local" | "ssl"; groups: string[]; upn: string } {
+  if (tlsUserUpn) {
+    if (!usernamesMatch(username, tlsUserUpn)) return { kind: "ssl-mismatch" };
+    const user = db.users.find((item) => !item.emergency && item.ssl && usernamesMatch(tlsUserUpn, item.upn));
+    if (!user) return { kind: "ssl-missing" };
+    return { kind: "accept", method: "ssl", groups: user.groups, upn: user.upn };
+  }
+  if (!password) return { kind: "none" };
+  const local = db.users.find(
+    (item) => !item.emergency && item.passwordHash && usernamesMatch(username, item.upn) && verifyPassword(password, item.passwordHash),
+  );
+  if (!local) return { kind: "none" };
+  return { kind: "accept", method: "local", groups: local.groups, upn: local.upn };
 }
 
 function signedReject(
@@ -271,7 +349,7 @@ function finishNow(
     includeMessageAuthenticator: boolean;
     requestAttributes: DisplayAttr[];
     groups: string[];
-    method: "break-glass";
+    method: "break-glass" | "local" | "ssl";
     signedInUpn: string;
     status: "approved";
   },

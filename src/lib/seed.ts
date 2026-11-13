@@ -50,6 +50,12 @@ export function emptyDatabase(): Database {
       timeoutSeconds: 45,
       radiusHost: "",
       cookieKey: "",
+      caCertPem: "",
+      caKeyPem: "",
+      serverCertPem: "",
+      serverKeyPem: "",
+      shownLocalPasswords: {},
+      loginSamplesBootstrapped: false,
     },
   };
 }
@@ -81,7 +87,7 @@ export function seedDatabase(base: Database = emptyDatabase()): Database {
 
 function devices(): Device[] {
   const now = new Date().toISOString();
-  const rows: Array<Omit<Device, "sharedSecret" | "createdAt" | "lastSeenAt" | "enabled" | "notes">> = [
+  const rows: Array<Omit<Device, "sharedSecret" | "createdAt" | "lastSeenAt" | "enabled" | "notes" | "logins">> = [
     {
       id: "core-sw01",
       name: "core-sw01",
@@ -156,6 +162,7 @@ function devices(): Device[] {
   return rows.map((row) => ({
     ...row,
     sharedSecret: sampleSecret(),
+    logins: ["ssl", "sso", "local"],
     enabled: true,
     notes: "",
     lastSeenAt: null,
@@ -274,6 +281,7 @@ function users(breakglassHash: string): DirectoryUser[] {
       groups: ["Break-Glass"],
       emergency: true,
       passwordHash: breakglassHash,
+      ssl: null,
     },
   ];
 }
@@ -285,5 +293,5 @@ function person(
   title: string,
   groups: string[],
 ): DirectoryUser {
-  return { id, upn, displayName, title, groups, emergency: false, passwordHash: null };
+  return { id, upn, displayName, title, groups, emergency: false, passwordHash: null, ssl: null };
 }

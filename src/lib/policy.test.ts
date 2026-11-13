@@ -14,6 +14,7 @@ const device: Device = {
   location: "DA3",
   service: "device-admin",
   sharedSecret: "sample-testsecret",
+  logins: ["ssl", "sso", "local"],
   enabled: true,
   notes: "",
   lastSeenAt: null,

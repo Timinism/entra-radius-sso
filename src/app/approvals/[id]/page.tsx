@@ -5,7 +5,7 @@ import { useParams, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 
 import { HarborError, harborFetch, usePoll } from "@/components/api";
-import { AttrTable, ErrorNote, ResultText, VendorMark } from "@/components/bits";
+import { AttrTable, ErrorNote, ResultText, VendorMark, loginLabel } from "@/components/bits";
 import { Button } from "@/components/ui/button";
 import { formatCt } from "@/lib/time";
 
@@ -151,7 +151,7 @@ function ApprovalView() {
               <p className="mt-1 text-sm text-muted-foreground">{approval.result.reason}</p>
               {approval.signedInUpn ? (
                 <p className="mt-1 font-mono text-xs text-muted-foreground">
-                  {approval.signedInUpn} · {approval.method} · {formatCt(approval.expiresAt)}
+                  {approval.signedInUpn} · {loginLabel(approval.method) || approval.method} · {formatCt(approval.expiresAt)}
                 </p>
               ) : null}
               <div className="mt-3">

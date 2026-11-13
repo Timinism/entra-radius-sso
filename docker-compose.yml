@@ -19,12 +19,14 @@ services:
       - "3847:3847"
       - "11812:11812/udp"
       - "11813:11813/udp"
+      - "11814:11814"
     environment:
       PORT: "3847"
       HOSTNAME: 0.0.0.0
       DATABASE_URL: postgresql://harbor:${HARBOR_DB_PASSWORD:-harbor}@db:5432/harbor
       HARBOR_RADIUS_PORT: "11812"
       HARBOR_ACCT_PORT: "11813"
+      HARBOR_TLS_PORT: "11814"
       HARBOR_COMPONENT_UPDATES: "0"
       ENTRA_TENANT_ID: ${ENTRA_TENANT_ID:-}
       ENTRA_CLIENT_ID: ${ENTRA_CLIENT_ID:-}

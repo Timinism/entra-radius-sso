@@ -6,6 +6,8 @@ export type DeviceOs = "ios-xe" | "panos" | "panorama";
 
 export type Service = "device-admin" | "globalprotect" | "both";
 
+export type LoginMethod = "ssl" | "sso" | "local";
+
 export type AdminService = "device-admin" | "globalprotect";
 
 export type Device = {
@@ -18,6 +20,7 @@ export type Device = {
   location: string;
   service: Service;
   sharedSecret: string;
+  logins: LoginMethod[];
   enabled: boolean;
   notes: string;
   lastSeenAt: string | null;
@@ -42,6 +45,14 @@ export type Policy = {
   paUserGroup: string | null;
 };
 
+export type SslCredential = {
+  serial: string;
+  fingerprint: string;
+  certPem: string;
+  keyPem: string;
+  exportPassword: string;
+};
+
 export type DirectoryUser = {
   id: string;
   upn: string;
@@ -50,6 +61,7 @@ export type DirectoryUser = {
   groups: string[];
   emergency: boolean;
   passwordHash: string | null;
+  ssl: SslCredential | null;
 };
 
 export type DisplayAttr = {
@@ -63,7 +75,7 @@ export type AuthResult = {
   reason: string;
   replyMessage: string;
   policyName: string | null;
-  method: "entra" | "sample" | "break-glass" | "none";
+  method: "entra" | "sample" | "break-glass" | "local" | "ssl" | "none";
   attributes: DisplayAttr[];
 };
 
@@ -83,7 +95,7 @@ export type Approval = {
   resolvedAt: string | null;
   signedInUpn: string | null;
   groups: string[];
-  method: "entra" | "sample" | "break-glass" | null;
+  method: "entra" | "sample" | "break-glass" | "local" | "ssl" | null;
   groupSource: "graph" | "token" | "sample" | null;
   denyReason: string | null;
   radiusIdentifier: number | null;
@@ -121,6 +133,12 @@ export type Settings = {
   timeoutSeconds: number;
   radiusHost: string;
   cookieKey: string;
+  caCertPem: string;
+  caKeyPem: string;
+  serverCertPem: string;
+  serverKeyPem: string;
+  shownLocalPasswords: Record<string, string>;
+  loginSamplesBootstrapped: boolean;
 };
 
 export type Database = {

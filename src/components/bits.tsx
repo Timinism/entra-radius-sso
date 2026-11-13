@@ -26,6 +26,14 @@ export function ResultText({ result }: { result: string }) {
   return <span className={cn("font-mono text-xs tracking-wide uppercase", tone)}>{result}</span>;
 }
 
+export function loginLabel(method: string | null | undefined): string {
+  if (method === "ssl") return "SSL";
+  if (method === "local") return "Local";
+  if (method === "break-glass") return "Break-glass";
+  if (method === "entra" || method === "sample" || method === "sso") return "SSO";
+  return "";
+}
+
 export function ModeBadge({ mode }: { mode: "entra" | "sample" | undefined }) {
   if (mode === "entra") return <Badge>Microsoft Entra</Badge>;
   return <Badge variant="outline">Sample directory</Badge>;

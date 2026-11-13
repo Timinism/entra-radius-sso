@@ -33,6 +33,7 @@ export default function BenchPage() {
   const [username, setUsername] = useState("maya.chen");
   const [service, setService] = useState("device-admin");
   const [password, setPassword] = useState("");
+  const [login, setLogin] = useState<"sso" | "local" | "ssl">("sso");
   const [result, setResult] = useState<BenchResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -50,6 +51,7 @@ export default function BenchPage() {
           username,
           service: device.service === "both" ? service : device.service === "globalprotect" ? "globalprotect" : "device-admin",
           password: password || undefined,
+          login,
         }),
       });
       setResult(response);
@@ -64,8 +66,8 @@ export default function BenchPage() {
     <main className="mx-auto w-full max-w-6xl px-4 py-6 md:px-8 md:py-8">
       <PageIntro kicker="Same code as the UDP listener" title="Test bench" />
       <p className="mb-6 max-w-2xl text-sm text-muted-foreground">
-        Build an Access-Request as if it came from the device. Harbor either answers immediately, for break-glass and
-        for rejects, or opens an approval you finish in the browser.
+        Build an Access-Request as if it came from the device. SSO opens an approval. A local password or an SSL
+        certificate answers immediately. Break-glass still uses its own password.
       </p>
       <div className="grid gap-4 lg:grid-cols-2">
         <Panel className="space-y-3 p-4">
@@ -97,8 +99,23 @@ export default function BenchPage() {
               </button>
             ))}
           </div>
+          <fieldset className="grid gap-2">
+            <legend className="text-xs text-muted-foreground">Login</legend>
+            {(
+              [
+                ["sso", "SSO"],
+                ["local", "Local password"],
+                ["ssl", "SSL certificate"],
+              ] as const
+            ).map(([value, label]) => (
+              <label key={value} className="flex items-center gap-2 text-sm">
+                <input type="radio" name="login" checked={login === value} onChange={() => setLogin(value)} />
+                {label}
+              </label>
+            ))}
+          </fieldset>
           <Label className="grid gap-1.5">
-            <span className="text-xs text-muted-foreground">Password, only for break-glass</span>
+            <span className="text-xs text-muted-foreground">Password, for local and break-glass</span>
             <Input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="off" />
           </Label>
           {error ? <ErrorNote>{error}</ErrorNote> : null}

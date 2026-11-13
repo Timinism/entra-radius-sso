@@ -25,4 +25,5 @@ USER nextjs
 EXPOSE 3847
 EXPOSE 11812/udp
 EXPOSE 11813/udp
+EXPOSE 11814
 CMD ["node", "server.js"]

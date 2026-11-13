@@ -1,13 +1,18 @@
 import { createSocket, type Socket } from "node:dgram";
+import { createServer, type TLSSocket } from "node:tls";
 
 import { handlePacket, waitForPacket } from "../lib/engine";
-import { listenerStage, radiusListenerEnabled } from "../lib/store";
+import { normalizeIp, peerPresented, takeRadiusPackets, tlsIdentity } from "../lib/radsec";
+import { listenerStage, radiusListenerEnabled, readState } from "../lib/store";
 
 type ListenerStatus = {
   bound: boolean;
   authPort: number;
   acctPort: number;
   error: string | null;
+  tlsBound: boolean;
+  tlsPort: number;
+  tlsError: string | null;
 };
 
 const globalState = globalThis as typeof globalThis & {
@@ -22,6 +27,9 @@ export const listenerStatus: ListenerStatus =
     authPort: 11812,
     acctPort: 11813,
     error: null,
+    tlsBound: false,
+    tlsPort: 11814,
+    tlsError: null,
   });
 
 const waits = new Map<string, Promise<Buffer | null>>();
@@ -57,6 +65,7 @@ export async function startRadiusListener(): Promise<void> {
   globalState.__harborRadius = true;
   listenerStatus.authPort = port("HARBOR_RADIUS_PORT", 11812);
   listenerStatus.acctPort = port("HARBOR_ACCT_PORT", 11813);
+  listenerStatus.tlsPort = port("HARBOR_TLS_PORT", 11814);
   const stage = listenerStage();
   const auth = createSocket("udp4");
   const acct = createSocket("udp4");
@@ -68,11 +77,111 @@ export async function startRadiusListener(): Promise<void> {
   await listen(auth, listenerStatus.authPort, "Authentication");
   await listen(acct, listenerStatus.acctPort, "Accounting");
   if (!listenerStatus.error) listenerStatus.bound = true;
-  console.info(
-    listenerStatus.bound
-      ? `[harbor] RADIUS listening on UDP ${listenerStatus.authPort} and ${listenerStatus.acctPort}`
-      : `[harbor] RADIUS did not bind: ${listenerStatus.error ?? "unknown"}`,
-  );
+  await listenTls(stage);
+  const udp = listenerStatus.bound
+    ? `UDP ${listenerStatus.authPort} and ${listenerStatus.acctPort}`
+    : `UDP did not bind (${listenerStatus.error ?? "unknown"})`;
+  const tls = listenerStatus.tlsBound
+    ? `TLS ${listenerStatus.tlsPort}`
+    : `TLS did not bind (${listenerStatus.tlsError ?? "unknown"})`;
+  console.info(`[harbor] RADIUS listening on ${udp}; ${tls}`);
+}
+
+async function listenTls(stage: ReturnType<typeof listenerStage>): Promise<void> {
+  try {
+    const db = await readState(stage);
+    if (!db.settings.serverCertPem || !db.settings.serverKeyPem || !db.settings.caCertPem) {
+      listenerStatus.tlsError = "Harbor has no TLS certificate yet.";
+      return;
+    }
+    const server = createServer(
+      {
+        cert: db.settings.serverCertPem,
+        key: db.settings.serverKeyPem,
+        ca: db.settings.caCertPem,
+        requestCert: true,
+        rejectUnauthorized: false,
+      },
+      (socket) => onTls(socket, stage),
+    );
+    await new Promise<void>((resolve) => {
+      const fail = (error: Error) => {
+        listenerStatus.tlsError = error.message;
+        listenerStatus.tlsBound = false;
+        resolve();
+      };
+      server.once("error", fail);
+      server.listen(listenerStatus.tlsPort, "0.0.0.0", () => {
+        server.off("error", fail);
+        server.on("error", (error) => {
+          listenerStatus.tlsError = error.message;
+          listenerStatus.tlsBound = false;
+        });
+        listenerStatus.tlsBound = true;
+        listenerStatus.tlsError = null;
+        resolve();
+      });
+    });
+  } catch (error) {
+    listenerStatus.tlsError = error instanceof Error ? error.message : "TLS listener failed.";
+    listenerStatus.tlsBound = false;
+  }
+}
+
+function onTls(socket: TLSSocket, stage: ReturnType<typeof listenerStage>): void {
+  const peer = socket.getPeerCertificate();
+  if (peerPresented(peer) && !socket.authorized) {
+    socket.destroy();
+    return;
+  }
+  const identity = tlsIdentity(peerPresented(peer) ? peer : null, socket.authorized);
+  const remote = normalizeIp(socket.remoteAddress);
+  let buffer: Buffer = Buffer.alloc(0);
+  let chain: Promise<void> = Promise.resolve();
+  socket.on("data", (chunk: Buffer) => {
+    buffer = Buffer.concat([buffer, chunk]);
+    const taken = takeRadiusPackets(buffer);
+    if (taken.error) {
+      socket.destroy();
+      return;
+    }
+    buffer = taken.rest;
+    for (const packet of taken.packets) {
+      const current = packet;
+      chain = chain
+        .then(async () => {
+          if (active >= 80) return;
+          active += 1;
+          try {
+            const result = await handlePacket(stage, current, remote, "radius", {
+              tlsUserUpn: identity.userUpn,
+              tlsDeviceName: identity.deviceName,
+            });
+            if (result.kind === "drop") return;
+            if (result.kind === "reply") {
+              socket.write(result.packet);
+              return;
+            }
+            const id = result.approval.id;
+            let waiting = waits.get(id);
+            if (!waiting) {
+              waiting = waitForPacket(stage, id).finally(() => {
+                waits.delete(id);
+              });
+              waits.set(id, waiting);
+            }
+            const reply = await waiting;
+            if (reply) socket.write(reply);
+          } finally {
+            active -= 1;
+          }
+        })
+        .catch((error: unknown) => {
+          const messageText = error instanceof Error ? error.message : "handler failed";
+          console.error(`[harbor] TLS RADIUS request failed: ${messageText}`);
+        });
+    }
+  });
 }
 
 async function receive(

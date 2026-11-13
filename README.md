@@ -14,11 +14,11 @@ npm run dev
 
 Open http://127.0.0.1:3847
 
-The web console listens on port 3847. RADIUS authentication listens on UDP 11812 and accounting on UDP 11813. Both stay up when you run `npm run dev` or `npm start`.
+The web console listens on port 3847. RADIUS authentication listens on UDP 11812 and accounting on UDP 11813. SSL logins use RADIUS over TLS on TCP 11814. All three stay up when you run `npm run dev` or `npm start`.
 
 ## Docker Compose
 
-`docker compose up --build` runs the same app next to Postgres. The console is at http://127.0.0.1:3847. RADIUS authentication is UDP 11812 and accounting is UDP 11813, published on the host. Devices, policies, and the audit are stored in Postgres. The container creates the table on first use. The sample Northline directory is used until `ENTRA_TENANT_ID`, `ENTRA_CLIENT_ID`, and `ENTRA_CLIENT_SECRET` are set in the environment you launch Compose from. `HARBOR_DB_PASSWORD` overrides the local database password, which defaults to `harbor`.
+`docker compose up --build` runs the same app next to Postgres. The console is at http://127.0.0.1:3847. RADIUS authentication is UDP 11812, accounting is UDP 11813, and SSL is TCP 11814, published on the host. Devices, policies, and the audit are stored in Postgres. The container creates the table on first use. The sample Northline directory is used until `ENTRA_TENANT_ID`, `ENTRA_CLIENT_ID`, and `ENTRA_CLIENT_SECRET` are set in the environment you launch Compose from. `HARBOR_DB_PASSWORD` overrides the local database password, which defaults to `harbor`.
 
 `npm test` checks the RADIUS codec, group matching, a sample Cisco accept, and the component updater.
 
@@ -37,6 +37,8 @@ Update all installs those releases into this checkout. A built deployment can sh
 5. Register the device’s RADIUS source address on **Devices**. Harbor ignores packets from anywhere else.
 
 Break-glass is the local username `breakglass`. The sample password is on **Directory**. It is checked only inside Harbor, and every use is audited. It is not an Entra password.
+
+Harbor accepts three logins. **SSO** holds the Access-Request while the person finishes in the browser. **Local** checks a password stored on that person in Directory and answers immediately. **SSL** is RADIUS over TLS. Download the Harbor CA from Directory, and issue a client certificate for the person. The test bench can present that certificate. Maya Chen is seeded with a local password and an SSL certificate. Both are shown on Directory. A matching local password does not open a browser sign-in. Each device chooses which of the three it allows.
 
 ## Connect Entra
 

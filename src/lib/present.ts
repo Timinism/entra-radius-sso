@@ -25,7 +25,7 @@ export function presentApproval(approval: Approval) {
   };
 }
 
-export function presentUser(user: DirectoryUser) {
+export function presentUser(user: DirectoryUser, shownLocalPassword: string | null = null) {
   return {
     id: user.id,
     upn: user.upn,
@@ -33,6 +33,11 @@ export function presentUser(user: DirectoryUser) {
     title: user.title,
     groups: user.groups,
     emergency: user.emergency,
+    local: Boolean(user.passwordHash) && !user.emergency,
+    localPassword: shownLocalPassword,
+    ssl: Boolean(user.ssl),
+    sslFingerprint: user.ssl?.fingerprint ?? null,
+    sslExportPassword: user.ssl?.exportPassword ?? null,
   };
 }
 
@@ -50,6 +55,7 @@ export function presentSettings(settings: Settings) {
     requireMessageAuthenticator: settings.requireMessageAuthenticator,
     timeoutSeconds: settings.timeoutSeconds,
     radiusHost: settings.radiusHost,
+    sslReady: Boolean(settings.caCertPem && settings.serverCertPem),
   };
 }
 

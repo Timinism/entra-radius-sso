@@ -16,7 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatCtDate } from "@/lib/time";
-import type { Device, DeviceOs, Service, Vendor } from "@/lib/types";
+import type { Device, DeviceOs, LoginMethod, Service, Vendor } from "@/lib/types";
 
 const EMPTY = {
   name: "",
@@ -28,6 +28,7 @@ const EMPTY = {
   service: "device-admin" as Service,
   notes: "",
   enabled: true,
+  logins: ["ssl", "sso", "local"] as LoginMethod[],
 };
 
 export default function DevicesPage() {
@@ -58,6 +59,7 @@ export default function DevicesPage() {
       service: device.service,
       notes: device.notes,
       enabled: device.enabled,
+      logins: device.logins?.length ? device.logins : ["ssl", "sso", "local"],
     });
     setFormError(null);
     setOpen(true);
@@ -113,6 +115,7 @@ export default function DevicesPage() {
               <th className="px-4 py-3 font-medium">Device</th>
               <th className="px-4 py-3 font-medium">Source</th>
               <th className="px-4 py-3 font-medium">Asks for</th>
+              <th className="px-4 py-3 font-medium">Logins</th>
               <th className="px-4 py-3 font-medium">Secret</th>
               <th className="px-4 py-3 font-medium">Last packet</th>
               <th className="px-4 py-3 font-medium" />
@@ -135,6 +138,7 @@ export default function DevicesPage() {
                 </td>
                 <td className="px-4 py-3 font-mono text-[13px]">{device.nasIp}</td>
                 <td className="px-4 py-3">{labelService(device.service)}</td>
+                <td className="px-4 py-3 text-muted-foreground">{loginLabels(device.logins)}</td>
                 <td className="px-4 py-3 font-mono text-[13px]">
                   <button type="button" className="hover:text-primary" onClick={() => setRevealed((current) => ({ ...current, [device.id]: !current[device.id] }))}>
                     {revealed[device.id] ? device.sharedSecret : "Show secret"}
@@ -216,6 +220,24 @@ export default function DevicesPage() {
                 {form.vendor === "paloalto" ? <option value="both">Administrators and GlobalProtect</option> : null}
               </select>
             </Field>
+            <fieldset className="grid gap-2">
+              <legend className="text-xs text-muted-foreground">Logins this device accepts</legend>
+              {(["ssl", "sso", "local"] as LoginMethod[]).map((method) => (
+                <label key={method} className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={form.logins.includes(method)}
+                    onChange={(event) => {
+                      const next = event.target.checked
+                        ? [...form.logins, method]
+                        : form.logins.filter((item) => item !== method);
+                      setForm({ ...form, logins: next });
+                    }}
+                  />
+                  {method === "ssl" ? "SSL certificate" : method === "sso" ? "SSO in the browser" : "Local password"}
+                </label>
+              ))}
+            </fieldset>
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" checked={form.enabled} onChange={(event) => setForm({ ...form, enabled: event.target.checked })} />
               Answer this device
@@ -239,6 +261,13 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       {children}
     </Label>
   );
+}
+
+function loginLabels(logins: LoginMethod[] | undefined): string {
+  const held = logins?.length ? logins : ["ssl", "sso", "local"];
+  return (["ssl", "sso", "local"] as LoginMethod[]).filter((method) => held.includes(method)).map((method) => (
+    method === "ssl" ? "SSL" : method === "sso" ? "SSO" : "Local"
+  )).join(" · ");
 }
 
 function labelService(service: Service): string {

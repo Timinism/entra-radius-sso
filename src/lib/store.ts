@@ -4,8 +4,9 @@ import path from "node:path";
 
 import { Pool } from "pg";
 
+import { ensureLoginMaterial } from "./certs";
 import { emptyDatabase, seedDatabase } from "./seed";
-import type { Database, Stage } from "./types";
+import type { Database, Device, DirectoryUser, LoginMethod, SslCredential, Stage } from "./types";
 
 const chains = new Map<string, Promise<unknown>>();
 
@@ -44,6 +45,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+const LOGIN_METHODS: LoginMethod[] = ["ssl", "sso", "local"];
+
 export function normalizeDatabase(value: unknown): Database {
   if (!isRecord(value) || value.seeded !== true) return seedDatabase();
   const base = emptyDatabase();
@@ -51,9 +54,9 @@ export function normalizeDatabase(value: unknown): Database {
   return {
     version: 1,
     seeded: true,
-    devices: Array.isArray(value.devices) ? (value.devices as Database["devices"]) : [],
+    devices: Array.isArray(value.devices) ? value.devices.map(normalizeDevice).filter((device) => device !== null) : [],
     policies: Array.isArray(value.policies) ? (value.policies as Database["policies"]) : [],
-    users: Array.isArray(value.users) ? (value.users as Database["users"]) : [],
+    users: Array.isArray(value.users) ? value.users.map(normalizeUser).filter((user) => user !== null) : [],
     approvals: Array.isArray(value.approvals) ? (value.approvals as Database["approvals"]) : [],
     events: Array.isArray(value.events) ? (value.events as Database["events"]) : [],
     settings: {
@@ -66,8 +69,55 @@ export function normalizeDatabase(value: unknown): Database {
       timeoutSeconds: clampTimeout(settings.timeoutSeconds),
       radiusHost: stringOr(settings.radiusHost, ""),
       cookieKey: stringOr(settings.cookieKey, base.settings.cookieKey),
+      caCertPem: stringOr(settings.caCertPem, ""),
+      caKeyPem: stringOr(settings.caKeyPem, ""),
+      serverCertPem: stringOr(settings.serverCertPem, ""),
+      serverKeyPem: stringOr(settings.serverKeyPem, ""),
+      shownLocalPasswords: stringMap(settings.shownLocalPasswords),
+      loginSamplesBootstrapped: settings.loginSamplesBootstrapped === true,
     },
   };
+}
+
+function normalizeDevice(value: unknown): Device | null {
+  if (!isRecord(value) || typeof value.id !== "string") return null;
+  const device = value as Device;
+  device.logins = normalizeLogins(value.logins);
+  return device;
+}
+
+function normalizeLogins(value: unknown): LoginMethod[] {
+  if (!Array.isArray(value)) return [...LOGIN_METHODS];
+  const picked = LOGIN_METHODS.filter((method) => value.includes(method));
+  return picked.length > 0 ? picked : [...LOGIN_METHODS];
+}
+
+function normalizeUser(value: unknown): DirectoryUser | null {
+  if (!isRecord(value) || typeof value.id !== "string") return null;
+  const user = value as DirectoryUser;
+  if (typeof user.passwordHash !== "string") user.passwordHash = null;
+  user.ssl = sslCredential(value.ssl);
+  return user;
+}
+
+function sslCredential(value: unknown): SslCredential | null {
+  if (!isRecord(value)) return null;
+  const serial = stringOr(value.serial, "");
+  const fingerprint = stringOr(value.fingerprint, "");
+  const certPem = stringOr(value.certPem, "");
+  const keyPem = stringOr(value.keyPem, "");
+  const exportPassword = stringOr(value.exportPassword, "");
+  if (!serial || !fingerprint || !certPem || !keyPem || !exportPassword) return null;
+  return { serial, fingerprint, certPem, keyPem, exportPassword };
+}
+
+function stringMap(value: unknown): Record<string, string> {
+  if (!isRecord(value)) return {};
+  const out: Record<string, string> = {};
+  for (const [key, item] of Object.entries(value)) {
+    if (/^[A-Za-z0-9._-]{1,40}$/.test(key) && typeof item === "string" && item.length <= 80) out[key] = item;
+  }
+  return out;
 }
 
 function stringOr(value: unknown, fallback: string): string {
@@ -97,11 +147,15 @@ function dataFile(stage: Stage): string {
 }
 
 function finishLoad(value: unknown): { db: Database; dirty: boolean } {
-  if (!isRecord(value) || value.seeded !== true) return { db: seedDatabase(), dirty: true };
-  const db = normalizeDatabase(value);
-  if (db.settings.cookieKey) return { db, dirty: false };
-  db.settings.cookieKey = randomBytes(32).toString("base64url");
-  return { db, dirty: true };
+  const fresh = !isRecord(value) || value.seeded !== true;
+  const db = fresh ? seedDatabase() : normalizeDatabase(value);
+  const material = ensureLoginMaterial(db);
+  let dirty = fresh || material;
+  if (!db.settings.cookieKey) {
+    db.settings.cookieKey = randomBytes(32).toString("base64url");
+    dirty = true;
+  }
+  return { db, dirty };
 }
 
 async function loadFile(stage: Stage): Promise<{ db: Database; dirty: boolean }> {
@@ -110,7 +164,7 @@ async function loadFile(stage: Stage): Promise<{ db: Database; dirty: boolean }>
     return finishLoad(JSON.parse(raw) as unknown);
   } catch (error) {
     const code = isRecord(error) ? error.code : undefined;
-    if (code === "ENOENT") return { db: seedDatabase(), dirty: true };
+    if (code === "ENOENT") return finishLoad(null);
     throw new Error("Harbor could not read its saved directory.");
   }
 }
@@ -165,7 +219,7 @@ async function loadPostgres(stage: Stage): Promise<{ db: Database; dirty: boolea
     const result = await getPool().query<{ data: unknown }>("SELECT data FROM harbor_state WHERE stage = $1", [
       stage,
     ]);
-    if (result.rowCount === 0) return { db: seedDatabase(), dirty: true };
+    if (result.rowCount === 0) return finishLoad(null);
     return finishLoad(result.rows[0]?.data);
   } catch (error) {
     if (error instanceof Error && error.message === "Database is unavailable.") throw error;

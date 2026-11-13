@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 import { usePoll } from "@/components/api";
-import { ErrorNote, PageIntro, ResultText, VendorMark } from "@/components/bits";
+import { ErrorNote, PageIntro, ResultText, VendorMark, loginLabel } from "@/components/bits";
 import { formatCtDate } from "@/lib/time";
 import type { AuthEvent } from "@/lib/types";
 
@@ -48,7 +48,10 @@ export default function AuditPage() {
                     {event.deviceName}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-muted-foreground">{event.reason}</td>
+                <td className="px-4 py-3 text-muted-foreground">
+                  {loginLabel(event.method) ? `${loginLabel(event.method)} · ` : ""}
+                  {event.reason}
+                </td>
               </tr>
             ))}
           </tbody>

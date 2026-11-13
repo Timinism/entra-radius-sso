@@ -1,4 +1,4 @@
-import type { AdminService, Device, DeviceOs, Policy, Service, Vendor } from "./types";
+import type { AdminService, Device, DeviceOs, LoginMethod, Policy, Service, Vendor } from "./types";
 
 const NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,40}$/;
 const SECRET = /^[A-Za-z0-9_.:@%+=/-]{8,64}$/;
@@ -83,6 +83,8 @@ export function parseDevice(body: unknown, existing?: Device): { device: Device 
     sharedSecret = next;
   }
   if (!SECRET.test(sharedSecret)) return { error: "Shared secret is not valid." };
+  const logins = parseLogins(input.logins, existing?.logins);
+  if ("error" in logins) return logins;
   const now = new Date().toISOString();
   const device: Device = {
     id: existing?.id ?? name.toLowerCase(),
@@ -94,12 +96,47 @@ export function parseDevice(body: unknown, existing?: Device): { device: Device 
     location,
     service,
     sharedSecret,
+    logins,
     enabled: input.enabled === undefined ? (existing?.enabled ?? true) : input.enabled === true,
     notes,
     lastSeenAt: existing?.lastSeenAt ?? null,
     createdAt: existing?.createdAt ?? now,
   };
   return { device };
+}
+
+const LOGIN_METHODS: LoginMethod[] = ["ssl", "sso", "local"];
+
+function parseLogins(value: unknown, existing?: LoginMethod[]): LoginMethod[] | { error: string } {
+  if (value === undefined) return existing?.length ? existing : [...LOGIN_METHODS];
+  if (!Array.isArray(value)) return { error: "Choose SSL, SSO, local, or a combination." };
+  const picked = LOGIN_METHODS.filter((method) => value.includes(method));
+  if (picked.length === 0 || picked.length !== new Set(value).size) {
+    return { error: "Choose at least one of SSL, SSO, and local." };
+  }
+  return picked;
+}
+
+export function parseLoginAction(body: unknown):
+  | { userId: string; action: "set-local"; password: string }
+  | { userId: string; action: "generate-local" | "clear-local" | "issue-ssl" | "revoke-ssl" }
+  | { error: string } {
+  if (!body || typeof body !== "object") return { error: "Send a login change." };
+  const input = body as Record<string, unknown>;
+  const userId = typeof input.userId === "string" ? input.userId.trim() : "";
+  if (!/^[A-Za-z0-9._-]{1,80}$/.test(userId)) return { error: "Choose a person." };
+  const action = input.action;
+  if (action === "generate-local" || action === "clear-local" || action === "issue-ssl" || action === "revoke-ssl") {
+    return { userId, action };
+  }
+  if (action === "set-local") {
+    const password = typeof input.password === "string" ? input.password.trim() : "";
+    if (password.length < 8 || password.length > 64 || /[\x00-\x1f\x7f]/.test(password)) {
+      return { error: "Local passwords are 8 to 64 characters, on one line." };
+    }
+    return { userId, action, password };
+  }
+  return { error: "Choose a local password or an SSL certificate." };
 }
 
 const ROLES = new Set([

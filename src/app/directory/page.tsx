@@ -10,7 +10,19 @@ import { Label } from "@/components/ui/label";
 
 type Directory = {
   redirectPath: string;
-  users: { id: string; upn: string; displayName: string; title: string; groups: string[]; emergency: boolean }[];
+  users: {
+    id: string;
+    upn: string;
+    displayName: string;
+    title: string;
+    groups: string[];
+    emergency: boolean;
+    local: boolean;
+    localPassword: string | null;
+    ssl: boolean;
+    sslFingerprint: string | null;
+    sslExportPassword: string | null;
+  }[];
   settings: {
     mode: "entra" | "sample";
     tenantId: string;
@@ -31,6 +43,9 @@ export default function DirectoryPage() {
   const [draft, setDraft] = useState<Partial<Directory["settings"]>>({});
   const [notice, setNotice] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+  const [passwords, setPasswords] = useState<Record<string, string>>({});
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const [busyUser, setBusyUser] = useState<string | null>(null);
   const settings = data ? { ...data.settings, ...draft } : null;
   const origin = typeof window === "undefined" ? "" : window.location.origin;
 
@@ -56,6 +71,23 @@ export default function DirectoryPage() {
       await reload();
     } catch (caught) {
       setFormError(caught instanceof HarborError ? caught.message : "Could not save.");
+    }
+  }
+
+  async function changeLogin(userId: string, action: string, password?: string) {
+    setLoginError(null);
+    setBusyUser(userId);
+    try {
+      await harborFetch("/api/directory/logins", {
+        method: "POST",
+        body: JSON.stringify({ userId, action, password }),
+      });
+      setPasswords((current) => ({ ...current, [userId]: "" }));
+      await reload();
+    } catch (caught) {
+      setLoginError(caught instanceof HarborError ? caught.message : "Could not update that login.");
+    } finally {
+      setBusyUser(null);
     }
   }
 
@@ -147,18 +179,80 @@ export default function DirectoryPage() {
             sent to Entra. Every use is an audit event. This sample password is not a tenant credential.
           </p>
           <p className="mt-3 font-mono text-sm">{settings?.breakglassPassword || "Generating…"}</p>
-          <h2 className="mt-6 font-display text-2xl">Sample people</h2>
-          <ul className="mt-3 divide-y divide-border">
-            {data?.users.filter((user) => !user.emergency).map((user) => (
-              <li key={user.id} className="py-3">
+          <h2 className="mt-6 font-display text-2xl">SSL, SSO, and local</h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            SSL is a client certificate on the TLS port. SSO holds the RADIUS request for the browser. Local checks a
+            password kept here and never sends it to Entra. Each device chooses which of the three it allows. A matching
+            local password answers immediately, so it does not open a browser sign-in.
+          </p>
+          <a href="/api/directory/ca" className="mt-3 inline-flex text-sm text-primary">
+            Download the Harbor CA
+          </a>
+        </Panel>
+      </div>
+      <Panel className="mt-4 p-4">
+        <h2 className="font-display text-2xl">People</h2>
+        {loginError ? <div className="mt-3"><ErrorNote>{loginError}</ErrorNote></div> : null}
+        <ul className="mt-2 divide-y divide-border">
+          {data?.users.filter((user) => !user.emergency).map((user) => (
+            <li key={user.id} className="grid gap-3 py-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+              <div>
                 <p className="font-medium">{user.displayName}</p>
                 <p className="font-mono text-xs text-muted-foreground">{user.upn}</p>
                 <p className="text-sm text-muted-foreground">{user.title} · {user.groups.join(", ")}</p>
-              </li>
-            ))}
-          </ul>
-        </Panel>
-      </div>
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm">
+                  Local: {user.localPassword ? <span className="font-mono">{user.localPassword}</span> : user.local ? "password set" : "not set"}
+                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Input
+                    type="password"
+                    value={passwords[user.id] ?? ""}
+                    autoComplete="off"
+                    placeholder="New local password"
+                    onChange={(event) => setPasswords((current) => ({ ...current, [user.id]: event.target.value }))}
+                  />
+                  <Button
+                    variant="outline"
+                    disabled={busyUser === user.id}
+                    onClick={() => changeLogin(user.id, "set-local", passwords[user.id] ?? "")}
+                  >
+                    Save
+                  </Button>
+                  <Button variant="outline" disabled={busyUser === user.id} onClick={() => changeLogin(user.id, "generate-local")}>
+                    Generate
+                  </Button>
+                  {user.local ? (
+                    <Button variant="outline" disabled={busyUser === user.id} onClick={() => changeLogin(user.id, "clear-local")}>
+                      Remove
+                    </Button>
+                  ) : null}
+                </div>
+                <p className="text-sm">
+                  SSL: {user.sslFingerprint ? <span className="font-mono text-xs">{user.sslFingerprint.slice(0, 16)}</span> : "no certificate"}
+                  {user.sslExportPassword ? <span className="ml-2 font-mono text-xs">{user.sslExportPassword}</span> : null}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="outline" disabled={busyUser === user.id} onClick={() => changeLogin(user.id, "issue-ssl")}>
+                    {user.ssl ? "Reissue certificate" : "Issue certificate"}
+                  </Button>
+                  {user.ssl ? (
+                    <a href={`/api/directory/certificate/${user.id}`} className="inline-flex h-8 items-center rounded-lg border border-border px-3 text-sm">
+                      Download .p12
+                    </a>
+                  ) : null}
+                  {user.ssl ? (
+                    <Button variant="outline" disabled={busyUser === user.id} onClick={() => changeLogin(user.id, "revoke-ssl")}>
+                      Revoke
+                    </Button>
+                  ) : null}
+                </div>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </Panel>
     </main>
   );
 }
